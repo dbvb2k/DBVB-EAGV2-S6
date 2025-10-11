@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Law Case Finder</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo">
+                    <span class="logo-icon">⚖️</span>
+                    <h1>Law Case Finder</h1>
+                </div>
+                <div class="header-subtitle">
+                    AI-Powered Legal Analysis
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- Upload Section -->
+            <div id="upload-section" class="section active">
+                <div class="upload-tabs">
+                    <button class="tab-button active" data-tab="file">📄 Upload File</button>
+                    <button class="tab-button" data-tab="text">📝 Paste Text</button>
+                </div>
+
+                <!-- File Upload Tab -->
+                <div id="file-tab" class="tab-content active">
+                    <div class="drop-zone" id="drop-zone">
+                        <div class="drop-zone-content">
+                            <div class="upload-icon">📁</div>
+                            <h3>Upload Legal Document</h3>
+                            <p>Drag and drop a PDF or TXT file here, or click to browse</p>
+                            <div class="file-requirements">
+                                <span>• PDF or TXT files only</span>
+                                <span>• Maximum size: 16MB</span>
+                                <span>• Legal judgments, opinions, or cases</span>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="file" id="file-input" accept=".pdf,.txt" style="display: none;">
+                    
+                    <div class="upload-examples">
+                        <h4>Supported Documents:</h4>
+                        <ul>
+                            <li>Court judgments and opinions</li>
+                            <li>Legal case documents</li>
+                            <li>Tribunal decisions</li>
+                            <li>Administrative rulings</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Text Input Tab -->
+                <div id="text-tab" class="tab-content">
+                    <div class="text-input-area">
+                        <label for="legal-text">
+                            <strong>Paste Legal Document Text:</strong>
+                        </label>
+                        <textarea id="legal-text" placeholder="Paste the legal document text here... (minimum 100 characters)
+
+Example: Copy and paste text from a court judgment, legal opinion, or case document that you want to analyze." rows="12"></textarea>
+                    <div class="text-info">
+                        <span id="char-count" class="char-count insufficient">0 characters (100 more needed)</span>
+                    </div>
+                </div>
+                <div class="text-actions">
+                    <button id="clear-text-btn" class="clear-text-btn" title="Clear text for new analysis">🗑️ Clear Text</button>
+                    <button id="analyze-text-btn" class="analyze-text-btn" disabled>🔍 Analyze Text</button>
+                </div>
+                    
+                    <div class="text-examples">
+                        <h4>Text Analysis Tips:</h4>
+                        <ul>
+                            <li>Include case names, court information, and dates</li>
+                            <li>Copy complete sections for better analysis</li>
+                            <li>Include facts, issues, and holdings if available</li>
+                            <li>Minimum 100 characters required</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="upload-footer">
+                    <div class="privacy-notice">
+                        <span class="privacy-icon">🔒</span>
+                        <span>Your documents are processed securely and not stored permanently</span>
+                    </div>
+                    <div class="legal-disclaimer">
+                        <span class="disclaimer-icon">⚖️</span>
+                        <span>This tool provides analysis for educational purposes only - not legal advice</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading Section -->
+            <div id="loading-section" class="section">
+                <div class="loading-container">
+                    <div class="spinner-icon">
+                        <div class="spinner-animation">
+                            <div class="spinner-circle"></div>
+                            <div class="spinner-circle"></div>
+                            <div class="spinner-circle"></div>
+                        </div>
+                        <div class="step-icon" id="loading-icon">🔍</div>
+                    </div>
+                    <div class="loading-content">
+                        <h2 id="loading-title" class="loading-title">Analyzing Document</h2>
+                        <p id="loading-message" class="loading-message">Extracting legal information from your document...</p>
+                        <div class="loading-steps">
+                            <div class="loading-step">
+                                <div class="step-indicator">
+                                    <div class="step-dot active"></div>
+                                </div>
+                                <span class="step-text">Processing document text</span>
+                            </div>
+                            <div class="loading-step">
+                                <div class="step-indicator">
+                                    <div class="step-dot"></div>
+                                </div>
+                                <span class="step-text">Identifying legal elements</span>
+                            </div>
+                            <div class="loading-step">
+                                <div class="step-indicator">
+                                    <div class="step-dot"></div>
+                                </div>
+                                <span class="step-text">Extracting case details</span>
+                            </div>
+                            <div class="loading-step">
+                                <div class="step-indicator">
+                                    <div class="step-dot"></div>
+                                </div>
+                                <span class="step-text">Analyzing citations</span>
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-section" class="section">
+                <div class="results-header">
+                    <h2>📋 Extracted Legal Information</h2>
+                    <div class="header-actions">
+                        <button id="back-btn" class="back-btn">← Back</button>
+                        <button id="generate-brief-btn" class="generate-brief-btn">📝 Generate Brief</button>
+                    </div>
+                </div>
+
+                <!-- Confidence Score -->
+                <div id="confidence-indicator" class="confidence-indicator" style="display: none;">
+                    <div class="confidence-label">Extraction Confidence:</div>
+                    <div class="confidence-bar">
+                        <div id="confidence-fill" class="confidence-fill"></div>
+                    </div>
+                    <div id="confidence-text" class="confidence-text">High (85%)</div>
+                </div>
+
+                <!-- Results Content -->
+                <div id="results-content" class="results-content">
+                    <!-- Results will be populated by JavaScript -->
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="results-actions">
+                    <button id="new-analysis-btn" class="action-btn secondary">← Upload New Document</button>
+                    <button id="generate-brief-action-btn" class="action-btn primary">📝 Generate Legal Brief</button>
+                </div>
+            </div>
+
+            <!-- Brief Section -->
+            <div id="brief-section" class="section">
+                <div class="brief-header">
+                    <h2>📝 Generated Legal Brief</h2>
+                    <div class="header-actions">
+                        <button id="back-to-results-btn" class="back-btn">← Back to Results</button>
+                        <button id="new-analysis-from-brief-btn" class="new-analysis-btn">🔄 New Analysis</button>
+                    </div>
+                </div>
+
+                <!-- Brief Quality -->
+                <div id="brief-quality" class="brief-quality">
+                    <div class="quality-metrics">
+                        <div class="metric">
+                            <span class="metric-label">Confidence:</span>
+                            <span id="brief-confidence" class="metric-value">High (85%)</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Word Count:</span>
+                            <span id="brief-word-count" class="metric-value">350</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Citations:</span>
+                            <span id="brief-citations-count" class="metric-value">5</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Brief Tabs -->
+                <div class="brief-tabs">
+                    <button class="tab-button active" data-brief-tab="brief">📋 Brief</button>
+                    <button class="tab-button" data-brief-tab="citations">📚 Citations</button>
+                    <button class="tab-button" data-brief-tab="export">📤 Export</button>
+                </div>
+
+                <!-- Brief Content -->
+                <div id="brief-content" class="brief-content">
+                    <!-- Brief content will be populated by JavaScript -->
+                </div>
+
+                <!-- Brief Actions -->
+                <div class="brief-actions">
+                    <button id="back-to-results-action-btn" class="action-btn secondary">← Back to Extraction</button>
+                    <button id="new-analysis-action-btn" class="action-btn primary">🔄 Analyze New Document</button>
+                </div>
+
+                <!-- Legal Disclaimer -->
+                <div class="legal-disclaimer">
+                    <span class="disclaimer-icon">⚠️</span>
+                    <span>This AI-generated brief is for educational and research purposes only. It does not constitute legal advice and should not be relied upon for legal decisions.</span>
+                </div>
+            </div>
+
+            <!-- Error Section -->
+            <div id="error-section" class="section">
+                <div class="error-container">
+                    <div class="error-icon" id="error-icon">❌</div>
+                    <div class="error-content">
+                        <h2 id="error-title" class="error-title">An Error Occurred</h2>
+                        <div class="error-details">
+                            <p id="error-message" class="error-text">Something went wrong</p>
+                        </div>
+                        <div class="error-actions">
+                            <button id="retry-btn" class="retry-btn">🔄 Try Again</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Agent Console Section -->
+        <div class="console-panel">
+            <div class="console-header" id="console-header">
+                <span class="console-title">🖥️ Agent Console</span>
+                <div class="console-controls">
+                    <button class="console-clear-btn" id="console-clear-btn" title="Clear Console">🗑️</button>
+                    <span class="expand-icon" id="console-expand-icon">▶</span>
+                </div>
+            </div>
+            <div id="console-content" class="console-content" style="display: none;">
+                <div class="console-output" id="console-output">
+                    <div class="console-line console-info">
+                        <span class="console-timestamp">[00:00:00]</span>
+                        <span class="console-text">🚀 Master Orchestrator initialized</span>
+                    </div>
+                    <div class="console-line console-info">
+                        <span class="console-timestamp">[00:00:00]</span>
+                        <span class="console-text">Ready to process legal documents...</span>
+                    </div>
+                </div>
+                <div class="console-settings">
+                    <div class="console-setting">
+                        <label class="console-label">Console Detail Level:</label>
+                        <div class="console-options">
+                            <label class="console-option">
+                                <input type="radio" name="consoleDetail" value="summary" checked>
+                                <span class="option-name">📊 Summary</span>
+                            </label>
+                            <label class="console-option">
+                                <input type="radio" name="consoleDetail" value="detailed">
+                                <span class="option-name">🔍 Detailed</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="config-panel">
+                <div class="config-header" id="config-header">
+                    <span class="config-title">⚙️ Settings</span>
+                    <span class="expand-icon" id="config-expand-icon">▶</span>
+                </div>
+                <div id="config-content" class="config-content" style="display: none;">
+                    <!-- General Settings -->
+                    <div class="config-section">
+                        <h4>⚙️ General Settings</h4>
+                        <div class="config-group">
+                            <label class="config-label">Output Format:</label>
+                            <select name="outputFormat" class="config-select">
+                                <option value="plain_text">Plain Text</option>
+                                <option value="pdf">PDF</option>
+                                <option value="markdown">Markdown</option>
+                            </select>
+                        </div>
+                        <div class="config-group">
+                            <label class="config-label">Language:</label>
+                            <select name="language" class="config-select">
+                                <option value="en">English</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="de">German</option>
+                                <option value="pt">Portuguese</option>
+                            </select>
+                        </div>
+                        <div class="config-group">
+                            <label class="config-label">Verbosity Level:</label>
+                            <select name="verbosityLevel" class="config-select">
+                                <option value="minimal">Minimal</option>
+                                <option value="standard" selected>Standard</option>
+                                <option value="detailed">Detailed</option>
+                            </select>
+                        </div>
+                        <div class="config-group">
+                            <label class="config-checkbox">
+                                <input type="checkbox" name="autoGenerateBrief">
+                                <span>Auto-generate Brief after extraction</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- AI Model Settings -->
+                    <div class="config-section">
+                        <h4>🤖 AI Model Settings</h4>
+                        <div class="config-group">
+                            <label class="config-label">Primary Model:</label>
+                            <div class="model-options">
+                                <label class="model-option">
+                                    <input type="radio" name="primaryModel" value="gemini" checked>
+                                    <span class="model-name">
+                                        🌟 Gemini Flash 2.0
+                                        <small>Cloud-based, high accuracy</small>
+                                    </span>
+                                </label>
+                                <label class="model-option">
+                                    <input type="radio" name="primaryModel" value="ollama">
+                                    <span class="model-name">
+                                        🏠 Ollama
+                                        <small>Local, privacy-focused</small>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="config-group">
+                            <label class="config-label">Fallback Model:</label>
+                            <select name="fallbackModel" class="config-select">
+                                <option value="ollama" selected>Ollama</option>
+                                <option value="gemini">Gemini</option>
+                            </select>
+                        </div>
+                        <div class="config-group">
+                            <label class="config-checkbox">
+                                <input type="checkbox" name="enableFallback" checked>
+                                <span>Enable fallback model if primary fails</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Citation Settings -->
+                    <div class="config-section">
+                        <h4>📚 Citation Settings</h4>
+                        <div class="config-group">
+                            <label class="config-label">Citation Format:</label>
+                            <div class="citation-formats">
+                                <label class="citation-option">
+                                    <input type="radio" name="citationFormat" value="bluebook" checked>
+                                    <span class="citation-name">📘 Bluebook</span>
+                                </label>
+                                <label class="citation-option">
+                                    <input type="radio" name="citationFormat" value="apa">
+                                    <span class="citation-name">📗 APA</span>
+                                </label>
+                                <label class="citation-option">
+                                    <input type="radio" name="citationFormat" value="mla">
+                                    <span class="citation-name">📙 MLA</span>
+                                </label>
+                                <label class="citation-option">
+                                    <input type="radio" name="citationFormat" value="chicago">
+                                    <span class="citation-name">📕 Chicago</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="config-group">
+                            <label class="config-checkbox">
+                                <input type="checkbox" name="includeCitationsInBrief" checked>
+                                <span>Include citations in generated brief</span>
+                            </label>
+                        </div>
+                        <div class="config-group">
+                            <label class="config-checkbox">
+                                <input type="checkbox" name="normalizeCitations" checked>
+                                <span>Automatically normalize citations</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Privacy Settings -->
+                    <div class="config-section">
+                        <h4>🔒 Privacy Settings</h4>
+                        <div class="config-group">
+                            <label class="config-checkbox">
+                                <input type="checkbox" name="storeAnalysisResults" checked>
+                                <span>Save analysis results for history</span>
+                            </label>
+                        </div>
+                        <div class="config-group">
+                            <label class="config-checkbox">
+                                <input type="checkbox" name="storeDocuments">
+                                <span>Store uploaded documents (not recommended)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="config-actions">
+                        <button id="save-preferences-btn" class="action-btn primary">💾 Save Preferences</button>
+                        <button id="reset-preferences-btn" class="action-btn secondary">🔄 Reset to Defaults</button>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-info">
+                <span class="version">v1.0.0</span>
+                <span class="disclaimer">Not legal advice • For educational purposes only</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

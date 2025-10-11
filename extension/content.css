@@ -1,0 +1,151 @@
+/* Law Case Finder - Content Script Styles */
+
+/* Highlight styles for legal text analysis */
+.law-case-finder-highlight {
+  background-color: #fff3cd !important;
+  border: 1px solid #ffeaa7 !important;
+  border-radius: 2px !important;
+  padding: 1px 2px !important;
+  margin: 0 1px !important;
+  box-shadow: 0 1px 3px rgba(255, 193, 7, 0.3) !important;
+  transition: all 0.2s ease !important;
+  position: relative !important;
+}
+
+.law-case-finder-highlight:hover {
+  background-color: #ffeaa7 !important;
+  box-shadow: 0 2px 5px rgba(255, 193, 7, 0.5) !important;
+  cursor: pointer !important;
+}
+
+/* Selection tooltip */
+.law-case-finder-selection-tooltip {
+  position: absolute !important;
+  background: #2a5298 !important;
+  color: white !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  z-index: 10001 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  white-space: nowrap !important;
+}
+
+.law-case-finder-selection-tooltip:hover {
+  background: #1e3c72 !important;
+  transform: translateY(-1px) !important;
+}
+
+.law-case-finder-selection-tooltip::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 100% !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  border: 5px solid transparent !important;
+  border-top-color: #2a5298 !important;
+}
+
+/* Floating analysis button */
+#law-case-finder-floating-btn {
+  position: fixed !important;
+  top: 20px !important;
+  right: 20px !important;
+  z-index: 10000 !important;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 25px !important;
+  padding: 12px 20px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 15px rgba(42, 82, 152, 0.3) !important;
+  transition: all 0.3s ease !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  display: none !important;
+  user-select: none !important;
+}
+
+#law-case-finder-floating-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(42, 82, 152, 0.4) !important;
+}
+
+#law-case-finder-floating-btn:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 4px 15px rgba(42, 82, 152, 0.3) !important;
+}
+
+/* Animation for highlights */
+@keyframes law-case-finder-highlight-appear {
+  0% {
+    background-color: #ffeb3b !important;
+    transform: scale(1.05) !important;
+  }
+  100% {
+    background-color: #fff3cd !important;
+    transform: scale(1) !important;
+  }
+}
+
+.law-case-finder-highlight.new {
+  animation: law-case-finder-highlight-appear 0.5s ease-out !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #law-case-finder-floating-btn {
+    top: 10px !important;
+    right: 10px !important;
+    padding: 10px 16px !important;
+    font-size: 12px !important;
+  }
+  
+  .law-case-finder-selection-tooltip {
+    font-size: 11px !important;
+    padding: 6px 10px !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .law-case-finder-highlight {
+    background-color: #ffff00 !important;
+    border-color: #000000 !important;
+    color: #000000 !important;
+  }
+  
+  #law-case-finder-floating-btn {
+    background: #000000 !important;
+    border: 2px solid #ffffff !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .law-case-finder-highlight,
+  #law-case-finder-floating-btn,
+  .law-case-finder-selection-tooltip {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  #law-case-finder-floating-btn,
+  .law-case-finder-selection-tooltip {
+    display: none !important;
+  }
+  
+  .law-case-finder-highlight {
+    background-color: transparent !important;
+    border: 1px solid #000000 !important;
+    box-shadow: none !important;
+  }
+}

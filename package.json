@@ -1,0 +1,21 @@
+{
+  "name": "law-case-finder",
+  "version": "2.0.0",
+  "description": "AI-powered Chrome extension with 4-layer cognitive architecture for legal case analysis",
+  "scripts": {
+    "server": "cd server && python main.py",
+    "install": "cd server && pip install -r requirements.txt"
+  },
+  "keywords": [
+    "chrome-extension",
+    "legal",
+    "ai",
+    "case-analysis",
+    "cognitive-architecture",
+    "gemini",
+    "ollama"
+  ],
+  "author": "Law Case Finder Team",
+  "license": "MIT",
+  "note": "This project uses vanilla JavaScript for the extension - no npm dependencies or build tools required! The package.json is optional and only provides convenience scripts for starting the Python server."
+}

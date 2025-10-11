@@ -1,0 +1,15 @@
+{
+  "name": "law-case-finder-extension",
+  "version": "2.0.0",
+  "description": "AI-powered legal case analysis Chrome extension with 4-layer cognitive architecture",
+  "keywords": [
+    "chrome-extension",
+    "legal",
+    "ai",
+    "case-analysis",
+    "vanilla-javascript"
+  ],
+  "author": "Law Case Finder Team",
+  "license": "MIT",
+  "note": "This extension uses vanilla JavaScript - no build process required! Simply load the 'extension' folder in Chrome's extension manager (chrome://extensions/) with Developer Mode enabled."
+}
