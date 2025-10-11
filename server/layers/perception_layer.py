@@ -253,13 +253,23 @@ class PerceptionLayer:
         try:
             prompt_template = self.prompts.get(prompt_key, "")
             if not prompt_template:
-                raise ValueError(f"Prompt key '{prompt_key}' not found")
+                available_keys = list(self.prompts.keys())
+                error_msg = f"Prompt key '{prompt_key}' not found in system prompts.\n"
+                error_msg += f"Available keys: {available_keys}\n"
+                error_msg += f"Total prompts loaded: {len(self.prompts)}"
+                print(f"❌ ERROR: {error_msg}")
+                raise ValueError(error_msg)
             
             # Format the prompt with provided kwargs
             return prompt_template.format(**kwargs)
+        except KeyError as e:
+            print(f"❌ ERROR: Missing template variable in prompt '{prompt_key}': {e}")
+            print(f"   Required variables: {e}")
+            print(f"   Provided variables: {list(kwargs.keys())}")
+            raise
         except Exception as e:
-            print(f"Error getting prompt '{prompt_key}': {e}")
-            return ""
+            print(f"❌ ERROR getting prompt '{prompt_key}': {e}")
+            raise
     
     def parse_json_response(self, response_text: str) -> Optional[Dict[str, Any]]:
         """

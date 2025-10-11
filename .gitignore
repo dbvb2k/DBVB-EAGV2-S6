@@ -10,13 +10,20 @@ dist/
 build/
 *.egg-info/
 
-# Virtual Environment
+# Virtual Environment & configuration
 venv/
 env/
+**/.env
+.env
+*.env
+!.env.example
+
 
 # Data
 cifar10/
 data/
+server/data/
+!server/data/.gitkeep
 
 # Model checkpoints (optional, remove if you want to track models)
 z*.pth
@@ -28,7 +35,9 @@ checkpoints/
 .idea/
 
 # Logs
-*.log 
+*.log
+logs/
+server/logs/ 
 
 # Generated files
 best*.txt

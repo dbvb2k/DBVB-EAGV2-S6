@@ -143,7 +143,7 @@ All preferences are stored server-side and persist across sessions.
 ## Configuration
 
 ### Required
-- **Python 3.8+**
+- **Python 3.12+**
 - **pip** (Python package manager)
 
 ### LLM Providers (choose one or both)

@@ -104,17 +104,40 @@ llm_logger, log_file = setup_llm_logging()
 # ========== COGNITIVE LAYERS INITIALIZATION ==========
 
 # Load system prompts
-prompts_file = Path("server/prompts/system_prompts.json")
+# Get the directory where main.py is located
+script_dir = Path(__file__).parent
+prompts_file = script_dir / "prompts" / "system_prompts.json"
+
 if not prompts_file.exists():
-    # Try alternative path
-    prompts_file = Path("prompts/system_prompts.json")
+    # Try alternative paths
+    alt_paths = [
+        Path("server/prompts/system_prompts.json"),
+        Path("prompts/system_prompts.json")
+    ]
+    for alt_path in alt_paths:
+        if alt_path.exists():
+            prompts_file = alt_path
+            break
 
 try:
     with open(prompts_file, 'r', encoding='utf-8') as f:
         system_prompts = json.load(f)
     print(f"✓ Loaded system prompts from {prompts_file}")
+    
+    # Validate prompts
+    required_prompts = ['legal_extraction', 'brief_generation', 'orchestration']
+    missing_prompts = [p for p in required_prompts if p not in system_prompts]
+    if missing_prompts:
+        print(f"⚠ Warning: Missing required prompts: {missing_prompts}")
+    else:
+        print(f"✓ Validated {len(system_prompts)} system prompts")
+        
 except Exception as e:
-    print(f"⚠ Warning: Could not load prompts file: {e}")
+    print(f"❌ ERROR: Could not load prompts file: {e}")
+    print(f"   Tried path: {prompts_file}")
+    print(f"   File exists: {prompts_file.exists()}")
+    print(f"   Current working directory: {Path.cwd()}")
+    print(f"\n⚠️  System will use empty prompts - API calls may fail!")
     system_prompts = {}
 
 # Initialize cognitive layers

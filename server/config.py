@@ -1,8 +1,18 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from server/.env
+# Get the directory where config.py is located
+config_dir = Path(__file__).parent
+env_file = config_dir / '.env'
+
+# Load .env file if it exists
+if env_file.exists():
+    load_dotenv(dotenv_path=env_file)
+else:
+    # Try loading from current directory as fallback
+    load_dotenv()
 
 class Config:
     # API Keys

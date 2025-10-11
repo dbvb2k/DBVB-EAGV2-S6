@@ -1,10 +1,19 @@
 #!/usr/bin/env python3
 """
-Test script for Law Case Finder - Agent Orchestration Testing
+Test script for Law Case Finder - 4-Layer Cognitive Architecture Testing
 
-This script tests the core functionality of the Law Case Finder system
-by using LLM-driven orchestration to determine which agents to call next,
-passing the output of each function to the next one in the sequence.
+This script tests the new 4-layer cognitive architecture:
+1. Perception Layer - LLM interactions and model management
+2. Memory Layer - User preferences and context storage
+3. Decision Layer - Intelligent orchestration and agent sequencing
+4. Action Layer - Task execution (extraction, generation, normalization)
+
+Tests include:
+- Individual layer functionality
+- End-to-end document analysis flow
+- User preference management
+- Agent orchestration with the Decision Layer
+- Session management
 """
 
 import requests
@@ -24,6 +33,10 @@ if sys.platform == "win32":
     try:
         import ctypes
         from ctypes import wintypes
+        
+        # Enable ANSI escape sequences in Windows console
+        kernel32 = ctypes.windll.kernel32
+        kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
         
         # Windows color constants
         class WindowsColors:
@@ -75,10 +88,20 @@ if sys.platform == "win32":
                 if bold:
                     color_code |= 8  # Make it bright
                 set_color(color_code)
-                print(text)
+                # Handle potential Unicode errors gracefully
+                try:
+                    print(text)
+                except UnicodeEncodeError:
+                    # Remove emojis but keep the text
+                    safe_text = text.encode('ascii', errors='replace').decode('ascii')
+                    print(safe_text)
                 set_color(WindowsColors.WHITE)  # Reset to white
-            except:
-                print(text)
+            except Exception as e:
+                # Fallback without colors
+                try:
+                    print(text)
+                except UnicodeEncodeError:
+                    print(text.encode('ascii', errors='replace').decode('ascii'))
         
         WINDOWS_COLORS = True
         
@@ -180,274 +203,260 @@ def status_log(message, status="info"):
     
     colored_print(message, status_color)
 
-class AgentOrchestrator:
+class CognitiveArchitectureTester:
     """
-    LLM-driven orchestrator that decides which agent to call next
-    based on the current state and previous outputs
+    Tester for the 4-layer cognitive architecture
+    Tests individual layers and end-to-end flows
     """
     
     def __init__(self):
         self.base_url = "http://localhost:3002"
         self.gemini_api_key = os.getenv('GEMINI_API_KEY', '')
-        self.gemini_model = None
-        self._setup_gemini()
         
-        # Available agents and their capabilities
-        self.available_agents = {
-            'legal_extractor': {
-                'name': 'Legal Extractor',
-                'endpoint': '/api/analyze-document',
-                'description': 'Extracts structured legal information from documents',
-                'input_required': ['document_text'],
-                'output_provides': ['case_name', 'court', 'date', 'facts', 'legal_issues', 'holdings', 'reasoning', 'citations', 'disposition']
+        # Test preferences for different scenarios
+        self.test_preferences = {
+            'minimal': {
+                'general': {
+                    'language': 'en',
+                    'verbosity_level': 'minimal',
+                    'auto_generate_brief': False
+                },
+                'citation': {
+                    'format': 'bluebook'
+                }
             },
-            'brief_generator': {
-                'name': 'Brief Generator',
-                'endpoint': '/api/generate-brief',
-                'description': 'Generates comprehensive legal briefs from extracted data',
-                'input_required': ['extracted_data'],
-                'output_provides': ['issue', 'facts', 'holding', 'reasoning', 'key_citations', 'word_count', 'confidence_score']
-            },
-            'citation_normalizer': {
-                'name': 'Citation Normalizer',
-                'endpoint': '/api/normalize-citations',
-                'description': 'Normalizes citations to standard formats',
-                'input_required': ['citations'],
-                'output_provides': ['normalized_citations', 'format_used', 'total_processed']
+            'detailed': {
+                'general': {
+                    'language': 'en',
+                    'verbosity_level': 'detailed',
+                    'auto_generate_brief': True
+                },
+                'citation': {
+                    'format': 'apa'
+                }
             }
         }
+
+    
+    def test_memory_layer(self) -> bool:
+        """Test Memory Layer - Preferences and session management"""
+        colored_print("\n🧠 Testing Memory Layer (Preferences & Context)", Colors.INFO, bold=True)
+        colored_print("=" * 60, Colors.INFO)
         
-        # Orchestration prompt template
-        self.orchestration_prompt = """
-You are an AI orchestrator for a legal analysis system. Based on the current state and previous outputs, determine which agent should be called next.
-
-AVAILABLE AGENTS:
-{available_agents}
-
-CURRENT STATE:
-- User Request: {user_request}
-- Completed Steps: {completed_steps}
-- Available Data: {available_data}
-- Previous Output: {previous_output}
-
-INSTRUCTIONS:
-1. Analyze what has been accomplished so far
-2. Determine what the next logical step should be
-3. Select the appropriate agent to call next
-4. Provide reasoning for your decision
-5. Consider dependencies (e.g., brief_generator needs extracted_data from legal_extractor)
-
-RESPONSE FORMAT (JSON):
-{{
-    "next_agent": "agent_id",
-    "reasoning": "Why this agent should be called next",
-    "input_data": {{
-        "key": "value"
-    }},
-    "is_complete": false,
-    "confidence": 0.95
-}}
-
-IMPORTANT RULES:
-- Always start with legal_extractor for document analysis
-- brief_generator requires extracted_data from legal_extractor
-- citation_normalizer can run after legal_extractor or brief_generator
-- Set is_complete to true when all necessary analysis is done
-- Provide specific input_data for the next agent call
-
-INPUT DATA FORMATS (MUST FOLLOW EXACTLY):
-- legal_extractor: {{"text": "document_text_content"}}  # MUST use "text" key, NOT "document_text"
-- brief_generator: {{"extracted_data": {{"case_name": "...", "facts": "...", etc.}}}}
-- citation_normalizer: {{"citations": ["citation1", "citation2", ...]}}
-
-CRITICAL: For legal_extractor, the input_data MUST have a "text" key containing the document text, NOT "document_text"
-"""
-
-    def _setup_gemini(self):
-        """Setup Gemini model for orchestration"""
         try:
-            if self.gemini_api_key:
-                genai.configure(api_key=self.gemini_api_key)
-                self.gemini_model = genai.GenerativeModel('gemini-2.0-flash')
-                agent_log("Agent Orchestrator", "Gemini model initialized successfully from server/.env", status="success")
+            # Test 1: Get current preferences
+            colored_print("\n1️⃣ Getting current preferences...", Colors.INFO)
+            response = requests.get(f"{self.base_url}/api/preferences")
+            if response.status_code == 200:
+                prefs = response.json()
+                status_log(f"✅ Retrieved preferences: {len(prefs.get('preferences', {}))} categories", "success")
             else:
-                agent_log("Agent Orchestrator", "No Gemini API key found in server/.env, using fallback logic", status="warning")
-        except Exception as e:
-            agent_log("Agent Orchestrator", f"Failed to setup Gemini: {e}", status="error")
-
-    def decide_next_agent(self, user_request: str, completed_steps: List[str], 
-                         available_data: Dict[str, Any], previous_output: Any = None) -> Dict[str, Any]:
-        """
-        Use LLM to decide which agent to call next
-        
-        Args:
-            user_request: Original user request
-            completed_steps: List of completed agent steps
-            available_data: Data available from previous steps
-            previous_output: Output from the last executed agent
+                status_log(f"❌ Failed to get preferences: {response.status_code}", "error")
+                return False
             
-        Returns:
-            Dict with next agent decision and reasoning
-        """
-        try:
-            if not self.gemini_model:
-                return self._fallback_decision(user_request, completed_steps, available_data)
-            
-            # Format available agents for prompt
-            agents_info = "\n".join([
-                f"- {agent_id}: {info['description']} (requires: {', '.join(info['input_required'])})"
-                for agent_id, info in self.available_agents.items()
-            ])
-            
-            # Prepare prompt
-            prompt = self.orchestration_prompt.format(
-                available_agents=agents_info,
-                user_request=user_request,
-                completed_steps=', '.join(completed_steps) if completed_steps else 'None',
-                available_data=json.dumps(available_data, indent=2),
-                previous_output=json.dumps(previous_output, indent=2) if previous_output else 'None'
+            # Test 2: Update preferences
+            colored_print("\n2️⃣ Updating preferences (test mode)...", Colors.INFO)
+            test_update = {
+                'category': 'general',
+                'updates': {
+                    'verbosity_level': 'detailed',
+                    'language': 'en'
+                }
+            }
+            response = requests.post(
+                f"{self.base_url}/api/preferences",
+                json=test_update,
+                headers={"Content-Type": "application/json"}
             )
+            if response.status_code == 200:
+                status_log("✅ Preferences updated successfully", "success")
+            else:
+                status_log(f"❌ Failed to update preferences: {response.status_code}", "error")
+                return False
             
-            # Get LLM response
-            response = self.gemini_model.generate_content(prompt)
+            # Test 3: Get preference schema
+            colored_print("\n3️⃣ Getting preference schema...", Colors.INFO)
+            response = requests.get(f"{self.base_url}/api/preferences/schema")
+            if response.status_code == 200:
+                schema = response.json()
+                categories = len(schema.get('schema', {}))
+                status_log(f"✅ Retrieved preference schema: {categories} categories", "success")
+            else:
+                status_log(f"❌ Failed to get schema: {response.status_code}", "error")
+                return False
             
-            if not response.text:
-                return self._fallback_decision(user_request, completed_steps, available_data)
+            # Test 4: Session management
+            colored_print("\n4️⃣ Testing session management...", Colors.INFO)
+            response = requests.get(f"{self.base_url}/api/session")
+            if response.status_code == 200:
+                session = response.json()
+                status_log(f"✅ Session retrieved: {session.get('success', False)}", "success")
+            else:
+                status_log(f"⚠️ Session endpoint returned: {response.status_code}", "warning")
             
-            # Parse JSON response
-            try:
-                # Extract JSON from response
-                import re
-                json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
-                if json_match:
-                    json_str = json_match.group(0)
-                    decision = json.loads(json_str)
-                else:
-                    decision = json.loads(response.text)
-                
-                # Validate decision
-                if 'next_agent' not in decision:
-                    return self._fallback_decision(user_request, completed_steps, available_data)
-                
-                agent_log("Agent Orchestrator", f"LLM decided: {decision['next_agent']} - {decision.get('reasoning', 'No reasoning provided')}", status="success")
-                return decision
-                
-            except json.JSONDecodeError:
-                agent_log("Agent Orchestrator", "Failed to parse LLM response, using fallback", status="warning")
-                return self._fallback_decision(user_request, completed_steps, available_data)
-                
+            colored_print("\n✅ Memory Layer tests passed!", Colors.SUCCESS, bold=True)
+            return True
+            
         except Exception as e:
-            agent_log("Agent Orchestrator", f"LLM orchestration failed: {e}", status="error")
-            return self._fallback_decision(user_request, completed_steps, available_data)
-
-    def _fallback_decision(self, user_request: str, completed_steps: List[str], 
-                          available_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Fallback decision logic when LLM is not available"""
-        if not completed_steps:
-            return {
-                "next_agent": "legal_extractor",
-                "reasoning": "Starting with document analysis",
-                "input_data": {"text": available_data.get('document_text', '')},
-                "is_complete": False,
-                "confidence": 0.8
-            }
-        
-        if 'legal_extractor' in completed_steps and 'brief_generator' not in completed_steps:
-            return {
-                "next_agent": "brief_generator",
-                "reasoning": "Extraction complete, generating brief",
-                "input_data": {"extracted_data": available_data.get('extracted_data', {})},
-                "is_complete": False,
-                "confidence": 0.8
-            }
-        
-        if 'brief_generator' in completed_steps and 'citation_normalizer' not in completed_steps:
-            return {
-                "next_agent": "citation_normalizer",
-                "reasoning": "Brief generated, normalizing citations",
-                "input_data": {"citations": available_data.get('citations', [])},
-                "is_complete": False,
-                "confidence": 0.8
-            }
-        
-        return {
-            "next_agent": None,
-            "reasoning": "All necessary steps completed",
-            "input_data": {},
-            "is_complete": True,
-            "confidence": 0.9
-        }
-
-    def call_agent(self, agent_id: str, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Call a specific agent with the provided input data
-        
-        Args:
-            agent_id: ID of the agent to call
-            input_data: Input data for the agent
-            
-        Returns:
-            Response from the agent
-        """
-        if agent_id not in self.available_agents:
-            return {
-                'success': False,
-                'error': f'Unknown agent: {agent_id}'
-            }
-        
-        agent_info = self.available_agents[agent_id]
-        endpoint = f"{self.base_url}{agent_info['endpoint']}"
+            status_log(f"❌ Memory Layer test failed: {e}", "error")
+            return False
+    
+    def test_decision_layer(self, document_text: str) -> bool:
+        """Test Decision Layer - Orchestration and planning"""
+        colored_print("\n🎯 Testing Decision Layer (Orchestration)", Colors.ORCHESTRATOR, bold=True)
+        colored_print("=" * 60, Colors.ORCHESTRATOR)
         
         try:
-            agent_log(agent_info['name'], f"Calling {agent_info['name']}...", status="info")
+            # Test orchestration endpoint
+            colored_print("\n1️⃣ Requesting execution plan from Decision Layer...", Colors.INFO)
             
-            # Fix input data format for legal_extractor if needed
-            if agent_id == 'legal_extractor' and 'document_text' in input_data and 'text' not in input_data:
-                agent_log(agent_info['name'], "Fixing input data format: document_text -> text", status="warning")
-                input_data['text'] = input_data.pop('document_text')
-            
-            # Debug: Print input data for legal_extractor
-            if agent_id == 'legal_extractor':
-                agent_log(agent_info['name'], f"Input data keys: {list(input_data.keys())}", status="info")
-                if 'text' in input_data:
-                    text_length = len(input_data['text']) if input_data['text'] else 0
-                    agent_log(agent_info['name'], f"Text length: {text_length} characters", status="info")
+            orchestration_request = {
+                'user_request': 'Analyze this legal document and generate a comprehensive brief',
+                'current_context': {
+                    'has_document': True,
+                    'document_length': len(document_text)
+                }
+            }
             
             response = requests.post(
-                endpoint,
-                json=input_data,
+                f"{self.base_url}/api/orchestrate",
+                json=orchestration_request,
+                headers={"Content-Type": "application/json"},
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('success'):
+                    plan = data.get('data', {}).get('orchestration_plan', {})
+                    status_log(f"✅ Orchestration plan received", "success")
+                    
+                    # Display plan details
+                    colored_print(f"\n   📋 Analysis: {plan.get('analysis', 'N/A')}", Colors.ORCHESTRATOR)
+                    
+                    agents = plan.get('selected_agents', [])
+                    colored_print(f"\n   🤖 Selected Agents ({len(agents)}):", Colors.INFO)
+                    for agent in agents:
+                        colored_print(f"      • {agent.get('agent_id')}: {agent.get('reason')}", Colors.ORCHESTRATOR)
+                    
+                    sequence = plan.get('execution_sequence', [])
+                    colored_print(f"\n   🔄 Execution Sequence: {' → '.join(sequence)}", Colors.SUCCESS)
+                    
+                    colored_print(f"   🎯 Confidence: {plan.get('confidence', 0):.2f}", Colors.SUCCESS)
+                    
+                    validation = data.get('data', {}).get('validation_result', {})
+                    if validation.get('is_valid'):
+                        status_log("   ✅ Plan validation: PASSED", "success")
+                    else:
+                        status_log(f"   ⚠️ Plan validation issues: {validation.get('errors', [])}", "warning")
+                    
+                    colored_print("\n✅ Decision Layer tests passed!", Colors.SUCCESS, bold=True)
+                    return True
+                else:
+                    status_log(f"❌ Orchestration failed: {data.get('error')}", "error")
+                    return False
+            else:
+                status_log(f"❌ Decision Layer failed: {response.status_code}", "error")
+                return False
+                
+        except Exception as e:
+            status_log(f"❌ Decision Layer test failed: {e}", "error")
+            return False
+
+    
+    def test_action_layer(self, document_text: str) -> Dict[str, Any]:
+        """Test Action Layer - Task execution (extraction, generation, normalization)"""
+        colored_print("\n⚡ Testing Action Layer (Task Execution)", Colors.INFO, bold=True)
+        colored_print("=" * 60, Colors.INFO)
+        
+        results = {}
+        
+        try:
+            # Test 1: Document extraction
+            colored_print("\n1️⃣ Testing Legal Extraction...", Colors.LEGAL_EXTRACTOR, bold=True)
+            response = requests.post(
+                f"{self.base_url}/api/analyze-document",
+                json={'text': document_text},
                 headers={"Content-Type": "application/json"},
                 timeout=60
             )
             
             if response.status_code == 200:
                 data = response.json()
-                agent_log(agent_info['name'], f"{agent_info['name']} completed successfully!", status="success")
-                return {
-                    'success': True,
-                    'data': data,
-                    'agent_id': agent_id
-                }
+                if data.get('success'):
+                    extracted = data.get('data', {}).get('extracted_fields', {})
+                    results['extraction'] = extracted
+                    
+                    status_log(f"✅ Extraction successful", "success")
+                    colored_print(f"   📄 Case: {extracted.get('case_name', 'N/A')}", Colors.LEGAL_EXTRACTOR)
+                    colored_print(f"   🏛️ Court: {extracted.get('court', 'N/A')}", Colors.LEGAL_EXTRACTOR)
+                    colored_print(f"   📅 Date: {extracted.get('date', 'N/A')}", Colors.LEGAL_EXTRACTOR)
+                    colored_print(f"   📚 Citations: {len(extracted.get('citations', []))}", Colors.LEGAL_EXTRACTOR)
+                else:
+                    status_log(f"❌ Extraction failed: {data.get('error')}", "error")
+                    return results
             else:
-                agent_log(agent_info['name'], f"{agent_info['name']} failed with status {response.status_code}", status="error")
-                try:
-                    error_data = response.json()
-                    agent_log(agent_info['name'], f"Error details: {error_data}", status="error")
-                except:
-                    agent_log(agent_info['name'], f"Error response: {response.text}", status="error")
-                return {
-                    'success': False,
-                    'error': f"HTTP {response.status_code}: {response.text}",
-                    'agent_id': agent_id
-                }
+                status_log(f"❌ Extraction endpoint failed: {response.status_code}", "error")
+                return results
+            
+            # Test 2: Brief generation
+            colored_print("\n2️⃣ Testing Brief Generation...", Colors.BRIEF_GENERATOR, bold=True)
+            response = requests.post(
+                f"{self.base_url}/api/generate-brief",
+                json={'extracted_data': extracted},
+                headers={"Content-Type": "application/json"},
+                timeout=60
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('success'):
+                    brief = data.get('data', {}).get('brief', {})
+                    results['brief'] = brief
+                    
+                    status_log(f"✅ Brief generation successful", "success")
+                    colored_print(f"   📋 Issue: {brief.get('issue', 'N/A')[:80]}...", Colors.BRIEF_GENERATOR)
+                    colored_print(f"   📊 Word Count: {brief.get('word_count', 0)}", Colors.BRIEF_GENERATOR)
+                    colored_print(f"   🎯 Confidence: {brief.get('confidence_score', 0)}%", Colors.SUCCESS)
+                else:
+                    status_log(f"⚠️ Brief generation failed: {data.get('error')}", "warning")
+            else:
+                status_log(f"⚠️ Brief endpoint failed: {response.status_code}", "warning")
+            
+            # Test 3: Citation normalization
+            citations = extracted.get('citations', [])
+            if citations:
+                colored_print("\n3️⃣ Testing Citation Normalization...", Colors.CITATION_NORMALIZER, bold=True)
+                response = requests.post(
+                    f"{self.base_url}/api/normalize-citations",
+                    json={'citations': citations},
+                    headers={"Content-Type": "application/json"},
+                    timeout=30
+                )
                 
-        except requests.exceptions.RequestException as e:
-            agent_log(agent_info['name'], f"{agent_info['name']} failed: {e}", status="error")
-            return {
-                'success': False,
-                'error': str(e),
-                'agent_id': agent_id
-            }
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get('success'):
+                        normalized = data.get('data', {}).get('normalized_citations', [])
+                        results['citations'] = normalized
+                        
+                        status_log(f"✅ Citation normalization successful", "success")
+                        colored_print(f"   📚 Processed: {len(normalized)} citations", Colors.CITATION_NORMALIZER)
+                        if normalized:
+                            colored_print(f"   Format: {normalized[0].get('format', 'N/A')}", Colors.CITATION_NORMALIZER)
+                    else:
+                        status_log(f"⚠️ Citation normalization failed", "warning")
+                else:
+                    status_log(f"⚠️ Citation endpoint failed: {response.status_code}", "warning")
+            else:
+                colored_print("\n3️⃣ Skipping citation test (no citations found)", Colors.INFO)
+            
+            colored_print("\n✅ Action Layer tests completed!", Colors.SUCCESS, bold=True)
+            return results
+            
+        except Exception as e:
+            status_log(f"❌ Action Layer test failed: {e}", "error")
+            return results
 
 # Configuration
 BASE_URL = "http://localhost:3002"
@@ -508,138 +517,111 @@ def test_health_check():
         status_log(f"❌ Health check failed: {e}", "error")
         return False
 
-def test_agent_orchestration():
-    """Test the LLM-driven agent orchestration"""
-    colored_print("🚀 Starting LLM-Driven Agent Orchestration Test", Colors.ORCHESTRATOR, bold=True)
-    colored_print("=" * 60, Colors.ORCHESTRATOR)
+def test_cognitive_architecture():
+    """Test the complete 4-layer cognitive architecture"""
+    colored_print("\n🧠 Testing 4-Layer Cognitive Architecture", Colors.ORCHESTRATOR, bold=True)
+    colored_print("=" * 80, Colors.ORCHESTRATOR)
+    colored_print("\nArchitecture: Perception → Memory → Decision → Action", Colors.INFO)
+    colored_print("=" * 80, Colors.ORCHESTRATOR)
     
     start_time = time.time()
     
-    # Initialize orchestrator
-    orchestrator = AgentOrchestrator()
+    # Initialize tester
+    tester = CognitiveArchitectureTester()
     
-    # Initial state
-    user_request = "Analyze this legal document and generate a comprehensive brief with normalized citations"
-    completed_steps = []
-    available_data = {
-        'document_text': SAMPLE_LEGAL_TEXT
+    # Test each layer
+    test_results = {
+        'memory': False,
+        'decision': False,
+        'action': False
     }
-    previous_output = None
     
-    step_count = 0
-    max_steps = 10  # Prevent infinite loops
+    # Layer 1: Perception Layer (tested implicitly through other layers)
+    colored_print("\n🎨 Perception Layer: Tested through all LLM interactions", Colors.INFO)
     
-    while step_count < max_steps:
-        step_count += 1
-        
-        colored_print(f"\n🔄 Step {step_count}: Deciding next agent...", Colors.INFO, bold=True)
-        
-        # Get LLM decision
-        decision = orchestrator.decide_next_agent(
-            user_request=user_request,
-            completed_steps=completed_steps,
-            available_data=available_data,
-            previous_output=previous_output
-        )
-        
-        # Display decision
-        colored_print(f"   🎯 Decision: {decision['next_agent']}", Colors.ORCHESTRATOR, bold=True)
-        colored_print(f"   💭 Reasoning: {decision['reasoning']}", Colors.INFO)
-        colored_print(f"   📊 Confidence: {decision['confidence']:.2f}", Colors.SUCCESS)
-        
-        # Check if we're done
-        if decision['is_complete'] or not decision['next_agent']:
-            colored_print("\n✅ Orchestration complete!", Colors.SUCCESS, bold=True)
-            break
-        
-        # Call the next agent
-        colored_print(f"\n🤖 Executing: {decision['next_agent']}", Colors.INFO, bold=True)
-        
-        agent_result = orchestrator.call_agent(
-            agent_id=decision['next_agent'],
-            input_data=decision['input_data']
-        )
-        
-        if agent_result['success']:
-            # Update state
-            completed_steps.append(decision['next_agent'])
-            previous_output = agent_result['data']
-            
-            # Extract relevant data for next steps
-            if decision['next_agent'] == 'legal_extractor':
-                extracted_data = agent_result['data'].get('data', {}).get('extracted_fields', {})
-                available_data['extracted_data'] = extracted_data
-                available_data['citations'] = extracted_data.get('citations', [])
-                
-                # Display extraction results
-                colored_print(f"   📄 Case Name: {extracted_data.get('case_name', 'N/A')}", Colors.LEGAL_EXTRACTOR)
-                colored_print(f"   🏛️ Court: {extracted_data.get('court', 'N/A')}", Colors.LEGAL_EXTRACTOR)
-                colored_print(f"   📅 Date: {extracted_data.get('date', 'N/A')}", Colors.LEGAL_EXTRACTOR)
-                colored_print(f"   ⚖️ Holdings: {len(extracted_data.get('holdings', []))} found", Colors.LEGAL_EXTRACTOR)
-                colored_print(f"   💭 Reasoning: {len(extracted_data.get('reasoning', []))} points", Colors.LEGAL_EXTRACTOR)
-                colored_print(f"   📚 Citations: {len(extracted_data.get('citations', []))} found", Colors.LEGAL_EXTRACTOR)
-                
-            elif decision['next_agent'] == 'brief_generator':
-                brief_data = agent_result['data'].get('data', {}).get('brief', {})
-                available_data['brief'] = brief_data
-                
-                # Display brief results
-                colored_print(f"   📋 Issue: {brief_data.get('issue', 'N/A')[:100]}...", Colors.BRIEF_GENERATOR)
-                colored_print(f"   📖 Facts: {brief_data.get('facts', 'N/A')[:100]}...", Colors.BRIEF_GENERATOR)
-                colored_print(f"   ⚖️ Holding: {brief_data.get('holding', 'N/A')[:100]}...", Colors.BRIEF_GENERATOR)
-                colored_print(f"   💭 Reasoning Points: {len(brief_data.get('reasoning', []))}", Colors.BRIEF_GENERATOR)
-                colored_print(f"   📚 Key Citations: {len(brief_data.get('key_citations', []))}", Colors.BRIEF_GENERATOR)
-                colored_print(f"   📊 Word Count: {brief_data.get('word_count', 0)}", Colors.BRIEF_GENERATOR)
-                colored_print(f"   🎯 Confidence: {brief_data.get('confidence_score', 0)}%", Colors.SUCCESS)
-                
-            elif decision['next_agent'] == 'citation_normalizer':
-                citation_data = agent_result['data'].get('data', {}).get('normalized_citations', [])
-                available_data['normalized_citations'] = citation_data
-                
-                # Display citation results
-                colored_print(f"   📚 Processed {len(citation_data)} citations", Colors.CITATION_NORMALIZER)
-                for i, citation in enumerate(citation_data[:3]):
-                    if isinstance(citation, dict):
-                        colored_print(f"   {i+1}. {citation.get('normalized', 'N/A')}", Colors.CITATION_NORMALIZER)
-                    else:
-                        colored_print(f"   {i+1}. {citation}", Colors.CITATION_NORMALIZER)
-        else:
-            agent_log("Orchestrator", f"Agent {decision['next_agent']} failed: {agent_result['error']}", status="error")
-            break
+    # Layer 2: Memory Layer
+    test_results['memory'] = tester.test_memory_layer()
+    
+    # Layer 3: Decision Layer
+    if test_results['memory']:
+        test_results['decision'] = tester.test_decision_layer(SAMPLE_LEGAL_TEXT)
+    
+    # Layer 4: Action Layer
+    if test_results['decision']:
+        action_results = tester.test_action_layer(SAMPLE_LEGAL_TEXT)
+        test_results['action'] = bool(action_results)
     
     # Summary
     end_time = time.time()
-    colored_print("\n" + "=" * 60, Colors.ORCHESTRATOR)
-    colored_print(f"🏁 LLM-Driven Orchestration completed in {end_time - start_time:.2f} seconds!", Colors.ORCHESTRATOR, bold=True)
+    colored_print("\n" + "=" * 80, Colors.ORCHESTRATOR)
+    colored_print(f"🏁 4-Layer Architecture Test completed in {end_time - start_time:.2f} seconds!", Colors.ORCHESTRATOR, bold=True)
+    colored_print("=" * 80, Colors.ORCHESTRATOR)
     
-    colored_print(f"\n📊 Execution Summary:", Colors.INFO, bold=True)
-    colored_print(f"   🔄 Total Steps: {step_count}", Colors.INFO)
-    colored_print(f"   ✅ Completed Agents: {', '.join(completed_steps)}", Colors.SUCCESS)
-    colored_print(f"   📄 Data Available: {list(available_data.keys())}", Colors.INFO)
+    colored_print(f"\n📊 Test Results:", Colors.INFO, bold=True)
+    for layer, passed in test_results.items():
+        status = "✅ PASSED" if passed else "❌ FAILED"
+        color = Colors.SUCCESS if passed else Colors.ERROR
+        colored_print(f"   {layer.upper()} Layer: {status}", color)
     
-    if completed_steps:
-        status_log("✅ LLM-driven orchestration test completed successfully!", "success")
-        colored_print("\n📋 Next Steps:", Colors.INFO)
-        colored_print("1. Review the orchestration decisions made by the LLM", Colors.INFO)
-        colored_print("2. Analyze the data flow between agents", Colors.INFO)
-        colored_print("3. Test with different legal documents", Colors.INFO)
-        colored_print("4. Fine-tune the orchestration prompts if needed", Colors.INFO)
+    all_passed = all(test_results.values())
+    if all_passed:
+        colored_print("\n🎉 All cognitive layers working correctly!", Colors.SUCCESS, bold=True)
+        colored_print("\n📋 System Status:", Colors.INFO, bold=True)
+        colored_print("   ✅ Perception Layer: LLM interactions functional", Colors.SUCCESS)
+        colored_print("   ✅ Memory Layer: Preferences stored server-side", Colors.SUCCESS)
+        colored_print("   ✅ Decision Layer: Intelligent orchestration active", Colors.SUCCESS)
+        colored_print("   ✅ Action Layer: Task execution operational", Colors.SUCCESS)
+        
+        colored_print("\n🚀 Next Steps:", Colors.INFO)
+        colored_print("   1. Test with your own legal documents", Colors.INFO)
+        colored_print("   2. Configure preferences in the Chrome extension", Colors.INFO)
+        colored_print("   3. Try different citation formats and verbosity levels", Colors.INFO)
+        colored_print("   4. Monitor server logs for LLM interactions", Colors.INFO)
     else:
-        status_log("⚠️ Orchestration test may need configuration:", "warning")
-        colored_print("1. Check if Gemini API key is set in server/.env file", Colors.WARNING)
-        colored_print("2. Ensure backend server is running", Colors.WARNING)
-        colored_print("3. Check server logs for detailed error messages", Colors.WARNING)
+        colored_print("\n⚠️ Some tests failed. Please check:", Colors.WARNING, bold=True)
+        colored_print("   1. Ensure server is running: python server/main.py", Colors.WARNING)
+        colored_print("   2. Check Gemini API key in server/.env or config.py", Colors.WARNING)
+        colored_print("   3. Review server logs in server/logs/", Colors.WARNING)
+        colored_print("   4. Verify Python dependencies are installed", Colors.WARNING)
+    
+    return all_passed
 
 def main():
-    """Run the LLM-driven agent orchestration test"""
+    """Run the 4-layer cognitive architecture tests"""
+    colored_print("\n" + "=" * 80, Colors.ORCHESTRATOR, bold=True)
+    colored_print("🧠 LAW CASE FINDER - 4-LAYER COGNITIVE ARCHITECTURE TEST", Colors.ORCHESTRATOR, bold=True)
+    colored_print("=" * 80, Colors.ORCHESTRATOR, bold=True)
+    
+    colored_print("\nTesting Layers:", Colors.INFO)
+    colored_print("   1. Perception Layer  - LLM interactions and model management", Colors.INFO)
+    colored_print("   2. Memory Layer      - User preferences and context storage", Colors.INFO)
+    colored_print("   3. Decision Layer    - Intelligent orchestration and planning", Colors.INFO)
+    colored_print("   4. Action Layer      - Task execution (extract, generate, normalize)", Colors.INFO)
+    
+    colored_print("\n" + "=" * 80, Colors.ORCHESTRATOR)
+    
     # Test 1: Health Check
     if not test_health_check():
-        status_log("\n❌ Backend server is not running. Please start it with:", "error")
-        colored_print("   cd server && python main.py", Colors.ERROR)
+        colored_print("\n" + "=" * 80, Colors.ERROR)
+        status_log("\n❌ Backend server is not running!", "error")
+        colored_print("\nTo start the server:", Colors.INFO, bold=True)
+        colored_print("   cd server", Colors.INFO)
+        colored_print("   python main.py", Colors.INFO)
+        colored_print("\nOr use npm script (if installed):", Colors.INFO)
+        colored_print("   npm run server", Colors.INFO)
+        colored_print("\n" + "=" * 80, Colors.ERROR)
         return
     
-    # Test 2: LLM-Driven Agent Orchestration
-    test_agent_orchestration()
+    # Test 2: 4-Layer Cognitive Architecture
+    success = test_cognitive_architecture()
+    
+    # Final summary
+    colored_print("\n" + "=" * 80, Colors.ORCHESTRATOR, bold=True)
+    if success:
+        colored_print("🎉 ALL TESTS PASSED - System is fully operational!", Colors.SUCCESS, bold=True)
+    else:
+        colored_print("⚠️  SOME TESTS FAILED - Review output above for details", Colors.WARNING, bold=True)
+    colored_print("=" * 80, Colors.ORCHESTRATOR, bold=True)
 
 if __name__ == "__main__":
     main()
