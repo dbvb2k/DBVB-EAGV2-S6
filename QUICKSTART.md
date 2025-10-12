@@ -27,7 +27,7 @@ Edit `server/config.py`:
 class Config:
     # For Gemini (recommended)
     GEMINI_API_KEY = "your-gemini-api-key-here"
-    GEMINI_MODEL = "gemini-2.0-flash-exp"
+    GEMINI_MODEL = "gemini-2.0-flash-001"  # Correct model name
     
     # For Ollama (local alternative)
     OLLAMA_BASE_URL = "http://localhost:11434"
@@ -36,6 +36,14 @@ class Config:
     # Model priority
     PRIMARY_MODEL = 'gemini'  # or 'ollama'
     FALLBACK_MODEL = 'ollama'  # or 'gemini'
+```
+
+**Or create a `server/.env` file:**
+```env
+GEMINI_API_KEY=your-actual-api-key-here
+GEMINI_MODEL=gemini-2.0-flash-001
+PRIMARY_MODEL=gemini
+FALLBACK_MODEL=ollama
 ```
 
 ### 3. Start the Server

@@ -9,7 +9,9 @@ class LawCaseFinder {
             primaryModel: 'gemini',
             fallbackModel: 'ollama',
             citationFormat: 'bluebook',
-            consoleDetail: 'summary'
+            consoleDetail: 'summary',
+            autoGenerateBrief: false,
+            serverUrl: 'http://localhost:3002'
         };
         
         // Agent tracking
@@ -28,6 +30,18 @@ class LawCaseFinder {
         this.setupEventListeners();
         this.loadConfig();
         this.showSection('upload');
+    }
+
+    consoleLog(message, type = 'info', agentId = null) {
+        // Simple console logging for debugging
+        const timestamp = new Date().toLocaleTimeString();
+        const prefix = agentId ? `[Agent ${agentId}]` : '[LawCaseFinder]';
+        console.log(`${timestamp} ${prefix} ${message}`);
+        
+        // Also log to the popup console if it exists
+        if (typeof this.logToConsole === 'function') {
+            this.logToConsole(message, type, agentId);
+        }
     }
 
     setupEventListeners() {
@@ -134,6 +148,16 @@ class LawCaseFinder {
                 this.saveConfig();
             });
         });
+        
+        // Auto-generate brief checkbox - update config in real-time
+        const autoGenerateCheckbox = document.querySelector('input[name="autoGenerateBrief"]');
+        if (autoGenerateCheckbox) {
+            autoGenerateCheckbox.addEventListener('change', (e) => {
+                this.config.autoGenerateBrief = e.target.checked;
+                this.saveConfig();
+                this.consoleLog(`Auto-generate brief ${e.target.checked ? 'enabled' : 'disabled'}`, 'info');
+            });
+        }
     }
 
     // Tab Management
@@ -406,7 +430,7 @@ class LawCaseFinder {
     }
 
     // Result Handling
-    handleAnalysisResult(result) {
+    async handleAnalysisResult(result) {
         if (result.success) {
             this.extractedData = result.data.extracted_fields;
             this.displayExtractionResults(result.data);
@@ -415,10 +439,49 @@ class LawCaseFinder {
             // Log success to console
             this.updateAgentStatus(1, 'completed', 'Document analysis completed');
             this.logAgentResult(1, this.extractedData, this.config.consoleDetail);
+            
+            // Check if auto-generate brief is enabled
+            await this.checkAutoGenerateBrief();
         } else {
             this.updateAgentStatus(1, 'error', result.error || 'Analysis failed');
             this.logToConsole(`❌ Agent 1 failed: ${result.error || 'Analysis failed'}`, 'error', 1);
             this.showError(result.error || 'Analysis failed');
+        }
+    }
+    
+    async checkAutoGenerateBrief() {
+        try {
+            console.log('🔍 checkAutoGenerateBrief() called');
+            
+            // Check preference from multiple sources (preference order)
+            // 1. Check local config cache
+            let isAutoGenerateEnabled = this.config.autoGenerateBrief;
+            console.log('  Config value:', isAutoGenerateEnabled);
+            
+            // 2. Check UI checkbox state (most current)
+            const autoGenerateCheckbox = document.querySelector('input[name="autoGenerateBrief"]');
+            console.log('  Checkbox found:', !!autoGenerateCheckbox);
+            
+            if (autoGenerateCheckbox) {
+                isAutoGenerateEnabled = autoGenerateCheckbox.checked;
+                console.log('  Checkbox checked:', isAutoGenerateEnabled);
+            }
+            
+            console.log('  Final decision - Auto-generate:', isAutoGenerateEnabled);
+            
+            if (isAutoGenerateEnabled) {
+                this.consoleLog('✓ Auto-generate brief enabled - generating brief automatically...', 'info');
+                
+                // Small delay to let user see extraction results
+                setTimeout(() => {
+                    console.log('🚀 Triggering automatic brief generation...');
+                    this.generateBrief();
+                }, 800);
+            } else {
+                this.consoleLog('Auto-generate brief disabled - user can manually generate brief', 'info');
+            }
+        } catch (error) {
+            console.error('Error checking auto-generate preference:', error);
         }
     }
 
@@ -628,8 +691,45 @@ class LawCaseFinder {
             briefContent.innerHTML = this.generateBriefHTML(this.briefData);
         } else if (tab === 'citations') {
             briefContent.innerHTML = this.generateCitationsHTML();
+            
+            // Add event listener for copy all citations button
+            const copyAllBtn = document.getElementById('copy-all-citations-btn');
+            if (copyAllBtn) {
+                copyAllBtn.addEventListener('click', () => this.copyAllCitations());
+            }
+            
+            // Add event listeners for individual citation copy buttons
+            const copyCitationBtns = document.querySelectorAll('.copy-citation-btn');
+            copyCitationBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const citation = btn.getAttribute('data-citation');
+                    navigator.clipboard.writeText(citation).then(() => {
+                        // Visual feedback - briefly change button text
+                        const originalText = btn.textContent;
+                        btn.textContent = '✓';
+                        setTimeout(() => {
+                            btn.textContent = originalText;
+                        }, 1000);
+                    }).catch(err => {
+                        console.error('Failed to copy citation:', err);
+                        alert('Failed to copy citation');
+                    });
+                });
+            });
         } else if (tab === 'export') {
             briefContent.innerHTML = this.generateExportHTML();
+            
+            // Add event listener for copy brief button
+            const copyBriefBtn = document.getElementById('copy-brief-btn');
+            if (copyBriefBtn) {
+                copyBriefBtn.addEventListener('click', () => this.copyBrief());
+            }
+            
+            // Add event listener for export TXT button
+            const exportTxtBtn = document.getElementById('export-txt-btn');
+            if (exportTxtBtn) {
+                exportTxtBtn.addEventListener('click', () => this.exportBrief('txt'));
+            }
         }
     }
 
@@ -642,7 +742,7 @@ class LawCaseFinder {
             <div class="citation-item">
                 <div class="citation-number">${index + 1}</div>
                 <div class="citation-text">${citation}</div>
-                <button class="copy-citation-btn" onclick="navigator.clipboard.writeText('${citation}')" title="Copy citation">📋</button>
+                <button class="copy-citation-btn" data-citation="${this.escapeHtml(citation)}" title="Copy citation">📋</button>
             </div>
         `).join('');
 
@@ -657,7 +757,7 @@ class LawCaseFinder {
                 ${citations}
             </div>
             <div class="citations-actions">
-                <button class="action-btn secondary" onclick="this.copyAllCitations()">
+                <button id="copy-all-citations-btn" class="action-btn secondary">
                     📋 Copy All Citations
                 </button>
             </div>
@@ -671,16 +771,22 @@ class LawCaseFinder {
                 <div class="export-format">
                     <h4>📄 Text Format</h4>
                     <p>Export as plain text file with all sections</p>
-                    <button class="export-btn" onclick="this.exportBrief('txt')">Download TXT</button>
+                    <button id="export-txt-btn" class="export-btn">Download TXT</button>
                 </div>
             </div>
             <div class="export-actions">
-                <button class="action-btn primary" onclick="this.copyBrief()">📋 Copy Brief to Clipboard</button>
+                <button id="copy-brief-btn" class="action-btn primary">📋 Copy Brief to Clipboard</button>
             </div>
         `;
     }
 
     // Utility Functions
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     formatField(value, emptyMessage = 'Not found') {
         if (!value || value === 'Not found' || (typeof value === 'string' && value.trim() === '')) {
             return `<span class="empty-field">${emptyMessage}</span>`;
@@ -842,6 +948,7 @@ class LawCaseFinder {
         // Update local config
         if (preferences.llm) this.config.primaryModel = preferences.llm.primary_model;
         if (preferences.citation) this.config.citationFormat = preferences.citation.format;
+        if (preferences.general) this.config.autoGenerateBrief = preferences.general.auto_generate_brief || false;
     }
 
     async savePreferencesToServer() {
@@ -953,9 +1060,38 @@ class LawCaseFinder {
     }
 
     copyBrief() {
+        if (!this.briefData) {
+            alert('No brief available to copy');
+            return;
+        }
+        
         const briefText = this.formatBriefForExport();
         navigator.clipboard.writeText(briefText).then(() => {
             alert('Brief copied to clipboard!');
+            this.consoleLog('Brief copied to clipboard', 'success');
+        }).catch(err => {
+            console.error('Failed to copy brief:', err);
+            alert('Failed to copy brief. Please try again.');
+            this.consoleLog('Failed to copy brief: ' + err.message, 'error');
+        });
+    }
+
+    copyAllCitations() {
+        if (!this.briefData || !this.briefData.key_citations) {
+            alert('No citations available to copy');
+            return;
+        }
+        
+        // Format all citations as a numbered list
+        const citationsText = this.briefData.key_citations
+            .map((citation, index) => `${index + 1}. ${citation}`)
+            .join('\n');
+        
+        navigator.clipboard.writeText(citationsText).then(() => {
+            alert(`${this.briefData.key_citations.length} citations copied to clipboard!`);
+        }).catch(err => {
+            console.error('Failed to copy citations:', err);
+            alert('Failed to copy citations. Please try again.');
         });
     }
 

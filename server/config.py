@@ -27,7 +27,7 @@ class Config:
     # AI Model Configuration
     PRIMARY_MODEL = os.getenv('PRIMARY_MODEL', 'gemini')
     FALLBACK_MODEL = os.getenv('FALLBACK_MODEL', 'ollama')
-    GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash')
+    GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-001')  # Correct model name
     OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama2')
     
     # Legal Database Configuration

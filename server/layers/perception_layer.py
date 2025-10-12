@@ -35,16 +35,38 @@ class PerceptionLayer:
         try:
             # Setup Gemini
             if self.config.GEMINI_API_KEY:
+                print(f"  → Configuring Gemini with API key (length: {len(self.config.GEMINI_API_KEY)})...")
                 genai.configure(api_key=self.config.GEMINI_API_KEY)
                 self.gemini_model = genai.GenerativeModel(self.config.GEMINI_MODEL)
+                print(f"  ✓ Gemini model initialized: {self.config.GEMINI_MODEL}")
             else:
+                print(f"  ⚠ No Gemini API key found - Gemini will not be available")
                 self.gemini_model = None
             
             # Ollama setup (no API key needed)
+            print(f"  → Checking Ollama availability at {self.config.OLLAMA_BASE_URL}...")
             self.ollama_available = self._check_ollama_availability()
+            if self.ollama_available:
+                print(f"  ✓ Ollama is available: {self.config.OLLAMA_MODEL}")
+            else:
+                print(f"  ⚠ Ollama is not available")
+            
+            # Summary
+            models_available = []
+            if self.gemini_model:
+                models_available.append("Gemini")
+            if self.ollama_available:
+                models_available.append("Ollama")
+            
+            if models_available:
+                print(f"  ✓ Available models: {', '.join(models_available)}")
+            else:
+                print(f"  ❌ WARNING: No LLM models available! Please configure at least one model.")
             
         except Exception as e:
-            print(f"Perception Layer model setup error: {e}")
+            print(f"  ❌ Perception Layer model setup error: {e}")
+            import traceback
+            traceback.print_exc()
             self.gemini_model = None
             self.ollama_available = False
     
@@ -79,6 +101,13 @@ class PerceptionLayer:
         """
         start_time = time.time()
         
+        # Debug output
+        print(f"  [Perception] process_with_llm called")
+        print(f"  [Perception] Preferred model: {preferred_model}")
+        print(f"  [Perception] Gemini available: {self.gemini_model is not None}")
+        print(f"  [Perception] Ollama available: {self.ollama_available}")
+        print(f"  [Perception] Config PRIMARY_MODEL: {self.config.PRIMARY_MODEL}")
+        
         # Determine model priority
         if preferred_model:
             primary = preferred_model
@@ -87,8 +116,11 @@ class PerceptionLayer:
             primary = self.config.PRIMARY_MODEL
             fallback = self.config.FALLBACK_MODEL
         
+        print(f"  [Perception] Using primary: {primary}, fallback: {fallback}")
+        
         # Try primary model
         if primary == 'gemini' and self.gemini_model:
+            print(f"  [Perception] Attempting Gemini...")
             result = self._process_with_gemini(prompt, temperature, max_retries)
             if result['success']:
                 result['model_used'] = 'gemini'
@@ -96,6 +128,7 @@ class PerceptionLayer:
                 return result
         
         if primary == 'ollama' and self.ollama_available:
+            print(f"  [Perception] Attempting Ollama...")
             result = self._process_with_ollama(prompt, temperature, max_retries)
             if result['success']:
                 result['model_used'] = 'ollama'
@@ -103,7 +136,9 @@ class PerceptionLayer:
                 return result
         
         # Try fallback model
+        print(f"  [Perception] Primary failed or unavailable, trying fallback...")
         if fallback == 'gemini' and self.gemini_model:
+            print(f"  [Perception] Attempting Gemini (fallback)...")
             result = self._process_with_gemini(prompt, temperature, max_retries)
             if result['success']:
                 result['model_used'] = 'gemini (fallback)'
@@ -111,6 +146,7 @@ class PerceptionLayer:
                 return result
         
         if fallback == 'ollama' and self.ollama_available:
+            print(f"  [Perception] Attempting Ollama (fallback)...")
             result = self._process_with_ollama(prompt, temperature, max_retries)
             if result['success']:
                 result['model_used'] = 'ollama (fallback)'
@@ -118,6 +154,13 @@ class PerceptionLayer:
                 return result
         
         # No model available
+        print(f"  [Perception] ❌ ERROR: No LLM models available!")
+        print(f"  [Perception] Debug info:")
+        print(f"    - Primary: {primary}, Available: {primary == 'gemini' and self.gemini_model or primary == 'ollama' and self.ollama_available}")
+        print(f"    - Fallback: {fallback}, Available: {fallback == 'gemini' and self.gemini_model or fallback == 'ollama' and self.ollama_available}")
+        print(f"    - self.gemini_model: {self.gemini_model}")
+        print(f"    - self.ollama_available: {self.ollama_available}")
+        
         return {
             'success': False,
             'error': 'No LLM models available',

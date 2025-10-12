@@ -144,12 +144,23 @@ except Exception as e:
 print("🧠 Initializing Cognitive Layers...")
 
 try:
+    # Create config instance
+    config = Config()
+    
+    # Debug: Show config values
+    print(f"  Config - API Key Present: {'YES' if config.GEMINI_API_KEY else 'NO'}")
+    print(f"  Config - Primary Model: {config.PRIMARY_MODEL}")
+    print(f"  Config - Gemini Model: {config.GEMINI_MODEL}")
+    print(f"  Config - Ollama URL: {config.OLLAMA_BASE_URL}")
+    
     # 1. Perception Layer (LLM interactions)
-    perception_layer = PerceptionLayer(Config(), system_prompts)
+    perception_layer = PerceptionLayer(config, system_prompts)
     print("✓ Perception Layer initialized")
     
     # 2. Memory Layer (preferences and context)
-    memory_layer = MemoryLayer(storage_path="server/data")
+    # Use relative path since we're running from server dir
+    data_path = "data" if Path("data").exists() else "server/data"
+    memory_layer = MemoryLayer(storage_path=data_path)
     print("✓ Memory Layer initialized")
     
     # 3. Decision Layer (orchestration)
@@ -337,18 +348,26 @@ def analyze_document():
         })
         
         # Use Action Layer to extract legal information
-        extraction_result = action_layer.extract_legal_information(
-            document_text=text_content,
-            preferences=preferences
-        )
+        try:
+            extraction_result = action_layer.extract_legal_information(
+                document_text=text_content,
+                preferences=preferences
+            )
+        except Exception as e:
+            error_msg = f"Action Layer extraction error: {str(e)}"
+            print(f"❌ ERROR: {error_msg}")
+            traceback.print_exc()
+            return jsonify({"error": error_msg}), 500
         
         # Log LLM output
         log_llm_interaction("Document Analyzer", "output", extraction_result, 
                            extraction_result.get('model_used', 'unknown'))
         
         if not extraction_result['success']:
+            error_detail = extraction_result.get('error', 'Unknown error')
+            print(f"❌ Extraction failed: {error_detail}")
             return jsonify({
-                "error": f"Failed to extract legal information: {extraction_result.get('error', 'Unknown error')}"
+                "error": f"Failed to extract legal information: {error_detail}"
             }), 500
         
         # Add to session history
