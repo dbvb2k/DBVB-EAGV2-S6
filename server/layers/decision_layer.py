@@ -74,7 +74,8 @@ class DecisionLayer:
     def decide_execution_plan(
         self,
         user_request: str,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
+        detail_level: str = 'summary'
     ) -> Dict[str, Any]:
         """
         Decide the optimal execution plan based on user request and context
@@ -82,11 +83,19 @@ class DecisionLayer:
         Args:
             user_request: User's request/input
             context: Current context/state
+            detail_level: 'summary' or 'detailed' for logging verbosity
             
         Returns:
             Execution plan with agent sequence and logic
         """
         start_time = time.time()
+        
+        # Log based on detail level
+        if detail_level == 'detailed':
+            print(f"  🎯 [Decision Layer] Orchestration Planning - Starting")
+            print(f"  [Decision] User request: {user_request[:100]}...")
+        else:
+            print(f"  🎯 [Decision Layer] Orchestration Planning - Starting")
         
         try:
             # Get user preferences
@@ -112,7 +121,8 @@ class DecisionLayer:
                 prompt=prompt,
                 context=context,
                 preferred_model=preferred_model,
-                temperature=temperature  # Low temperature for consistent orchestration
+                temperature=temperature,  # Low temperature for consistent orchestration
+                detail_level=detail_level
             )
             
             if not result['success']:
@@ -128,6 +138,8 @@ class DecisionLayer:
             
             # Validate the plan
             validation = self.validate_execution_plan(plan)
+            
+            print(f"  ✅ [Decision Layer] Orchestration Planning - Completed")
             
             return {
                 'success': True,

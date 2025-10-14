@@ -123,16 +123,20 @@ class MemoryLayer:
             print(f"Error saving preferences: {e}")
             return False
     
-    def get_preferences(self, category: Optional[str] = None) -> Dict[str, Any]:
+    def get_preferences(self, category: Optional[str] = None, detail_level: str = 'summary') -> Dict[str, Any]:
         """
         Get user preferences
         
         Args:
             category: Optional category to filter (general, llm, citation, integration, privacy)
+            detail_level: 'summary' or 'detailed' for logging verbosity
             
         Returns:
             Preferences dict or category dict
         """
+        if detail_level == 'detailed':
+            print(f"  💾 [Memory Layer] Loading Preferences")
+        
         if category:
             return self.preferences.get(category, {})
         return self.preferences.copy()

@@ -83,19 +83,23 @@ def setup_llm_logging():
     return _llm_logger, _log_file
 
 
-def log_llm_interaction(agent_name, interaction_type, data, model_used=None):
-    """Log LLM input/output interactions"""
+def log_llm_interaction(layer_name, interaction_type, data, model_used=None, task=None):
+    """Log LLM input/output interactions with layer information"""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     log_entry = {
         "timestamp": timestamp,
-        "agent": agent_name,
+        "layer": layer_name,
+        "task": task,
         "interaction_type": interaction_type,
         "model_used": model_used,
         "data": data
     }
     
-    llm_logger.info(f"[{agent_name}] {interaction_type.upper()}: {log_entry}")
+    if task:
+        llm_logger.info(f"[{layer_name}: {task}] {interaction_type.upper()}: {log_entry}")
+    else:
+        llm_logger.info(f"[{layer_name}] {interaction_type.upper()}: {log_entry}")
 
 
 # Initialize LLM logging
@@ -335,6 +339,12 @@ def analyze_document():
         # Get user preferences
         preferences = memory_layer.get_preferences()
         
+        # Get detail level from preferences
+        detail_level = preferences.get('general', {}).get('verbosity_level', 'standard')
+        # Map verbosity level to detail level
+        detail_level_map = {'minimal': 'summary', 'standard': 'summary', 'detailed': 'detailed'}
+        detail_level = detail_level_map.get(detail_level, 'summary')
+        
         # Update session context
         memory_layer.update_session_context({
             'has_document': True,
@@ -342,17 +352,20 @@ def analyze_document():
         })
         
         # Log LLM input
-        log_llm_interaction("Document Analyzer", "input", {
+        log_llm_interaction("Action Layer", "input", {
             "text_length": len(text_content),
             "text_preview": text_content[:200] + "..." if len(text_content) > 200 else text_content
-        })
+        }, task="Legal Extraction")
         
         # Use Action Layer to extract legal information
         try:
+            print(f"⚡ [Action Layer] Starting legal extraction...")
             extraction_result = action_layer.extract_legal_information(
                 document_text=text_content,
-                preferences=preferences
+                preferences=preferences,
+                detail_level=detail_level
             )
+            print(f"✅ [Action Layer] Legal extraction completed")
         except Exception as e:
             error_msg = f"Action Layer extraction error: {str(e)}"
             print(f"❌ ERROR: {error_msg}")
@@ -360,8 +373,8 @@ def analyze_document():
             return jsonify({"error": error_msg}), 500
         
         # Log LLM output
-        log_llm_interaction("Document Analyzer", "output", extraction_result, 
-                           extraction_result.get('model_used', 'unknown'))
+        log_llm_interaction("Action Layer", "output", extraction_result, 
+                           extraction_result.get('model_used', 'unknown'), task="Legal Extraction")
         
         if not extraction_result['success']:
             error_detail = extraction_result.get('error', 'Unknown error')
@@ -410,20 +423,29 @@ def generate_brief():
         # Get user preferences
         preferences = memory_layer.get_preferences()
         
+        # Get detail level from preferences
+        detail_level = preferences.get('general', {}).get('verbosity_level', 'standard')
+        # Map verbosity level to detail level
+        detail_level_map = {'minimal': 'summary', 'standard': 'summary', 'detailed': 'detailed'}
+        detail_level = detail_level_map.get(detail_level, 'summary')
+        
         # Log LLM input
-        log_llm_interaction("Brief Generator", "input", {
+        log_llm_interaction("Action Layer", "input", {
             "extracted_data_keys": list(extracted_data.keys()) if isinstance(extracted_data, dict) else "Not a dict"
-        })
+        }, task="Brief Generation")
         
         # Use Action Layer to generate brief
+        print(f"⚡ [Action Layer] Starting brief generation...")
         brief_result = action_layer.generate_legal_brief(
             extracted_data=extracted_data,
-            preferences=preferences
+            preferences=preferences,
+            detail_level=detail_level
         )
+        print(f"✅ [Action Layer] Brief generation completed")
         
         # Log LLM output
-        log_llm_interaction("Brief Generator", "output", brief_result, 
-                           brief_result.get('model_used', 'unknown'))
+        log_llm_interaction("Action Layer", "output", brief_result, 
+                           brief_result.get('model_used', 'unknown'), task="Brief Generation")
         
         if not brief_result['success']:
             return jsonify({
@@ -490,20 +512,22 @@ def normalize_citations():
         preferences = memory_layer.get_preferences()
         
         # Log LLM input
-        log_llm_interaction("Citation Normalizer", "input", {
+        log_llm_interaction("Action Layer", "input", {
             "citations_count": len(citations),
             "citations_preview": citations[:3] if len(citations) > 3 else citations
-        })
+        }, task="Citation Normalization")
         
         # Use Action Layer to normalize citations
+        print(f"⚡ [Action Layer] Starting citation normalization...")
         result = action_layer.normalize_citations(
             citations=citations,
             preferences=preferences
         )
+        print(f"✅ [Action Layer] Citation normalization completed")
         
         # Log LLM output
-        log_llm_interaction("Citation Normalizer", "output", result, 
-                           result.get('model_used', 'rule-based'))
+        log_llm_interaction("Action Layer", "output", result, 
+                           result.get('model_used', 'rule-based'), task="Citation Normalization")
         
         return jsonify(response_formatter.format_citation_response(result))
         
@@ -527,21 +551,31 @@ def orchestrate_agents():
         if not user_request:
             return jsonify({"error": "User request is required"}), 400
         
+        # Get user preferences for detail level
+        preferences = memory_layer.get_preferences()
+        detail_level = preferences.get('general', {}).get('verbosity_level', 'standard')
+        # Map verbosity level to detail level
+        detail_level_map = {'minimal': 'summary', 'standard': 'summary', 'detailed': 'detailed'}
+        detail_level = detail_level_map.get(detail_level, 'summary')
+        
         # Log LLM input
-        log_llm_interaction("Master Orchestrator", "input", {
+        log_llm_interaction("Decision Layer", "input", {
             "user_request": user_request,
             "current_context": current_context
-        })
+        }, task="Orchestration Planning")
         
         # Get execution plan from Decision Layer
+        print(f"🎯 [Decision Layer] Starting orchestration planning...")
         orchestration_result = decision_layer.decide_execution_plan(
             user_request=user_request,
-            context=current_context
+            context=current_context,
+            detail_level=detail_level
         )
+        print(f"✅ [Decision Layer] Orchestration planning completed")
         
         # Log LLM output
-        log_llm_interaction("Master Orchestrator", "output", orchestration_result, 
-                           orchestration_result.get('model_used', 'unknown'))
+        log_llm_interaction("Decision Layer", "output", orchestration_result, 
+                           orchestration_result.get('model_used', 'unknown'), task="Orchestration Planning")
         
         if not orchestration_result['success']:
             return jsonify({

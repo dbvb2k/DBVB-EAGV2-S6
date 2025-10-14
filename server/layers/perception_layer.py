@@ -84,7 +84,8 @@ class PerceptionLayer:
         context: Optional[Dict[str, Any]] = None,
         preferred_model: str = None,
         temperature: float = 0.7,
-        max_retries: int = 2
+        max_retries: int = 2,
+        detail_level: str = 'summary'
     ) -> Dict[str, Any]:
         """
         Process a prompt with the LLM using preferred model with fallback
@@ -95,18 +96,22 @@ class PerceptionLayer:
             preferred_model: Preferred model ('gemini' or 'ollama')
             temperature: Temperature for generation
             max_retries: Maximum number of retries
+            detail_level: 'summary' or 'detailed' for logging verbosity
             
         Returns:
             Dict with success status, response text, and metadata
         """
         start_time = time.time()
         
-        # Debug output
-        print(f"  [Perception] process_with_llm called")
-        print(f"  [Perception] Preferred model: {preferred_model}")
-        print(f"  [Perception] Gemini available: {self.gemini_model is not None}")
-        print(f"  [Perception] Ollama available: {self.ollama_available}")
-        print(f"  [Perception] Config PRIMARY_MODEL: {self.config.PRIMARY_MODEL}")
+        # Log based on detail level
+        if detail_level == 'detailed':
+            print(f"  🧠 [Perception Layer] LLM Processing - Starting")
+            print(f"  [Perception] Preferred model: {preferred_model}")
+            print(f"  [Perception] Gemini available: {self.gemini_model is not None}")
+            print(f"  [Perception] Ollama available: {self.ollama_available}")
+            print(f"  [Perception] Config PRIMARY_MODEL: {self.config.PRIMARY_MODEL}")
+        else:
+            print(f"  🧠 [Perception Layer] LLM Processing - Starting")
         
         # Determine model priority
         if preferred_model:
@@ -120,19 +125,23 @@ class PerceptionLayer:
         
         # Try primary model
         if primary == 'gemini' and self.gemini_model:
-            print(f"  [Perception] Attempting Gemini...")
+            if detail_level == 'detailed':
+                print(f"  [Perception] Attempting Gemini...")
             result = self._process_with_gemini(prompt, temperature, max_retries)
             if result['success']:
                 result['model_used'] = 'gemini'
                 result['processing_time'] = time.time() - start_time
+                print(f"  ✅ [Perception Layer] LLM Processing - Completed (Gemini)")
                 return result
         
         if primary == 'ollama' and self.ollama_available:
-            print(f"  [Perception] Attempting Ollama...")
+            if detail_level == 'detailed':
+                print(f"  [Perception] Attempting Ollama...")
             result = self._process_with_ollama(prompt, temperature, max_retries)
             if result['success']:
                 result['model_used'] = 'ollama'
                 result['processing_time'] = time.time() - start_time
+                print(f"  ✅ [Perception Layer] LLM Processing - Completed (Ollama)")
                 return result
         
         # Try fallback model

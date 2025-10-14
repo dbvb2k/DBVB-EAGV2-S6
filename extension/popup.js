@@ -14,13 +14,52 @@ class LawCaseFinder {
             serverUrl: 'http://localhost:3002'
         };
         
-        // Agent tracking
-        this.agents = {
-            1: { name: 'Document Analysis', color: 'agent-1', status: 'idle' },
-            2: { name: 'Brief Generator', color: 'agent-2', status: 'idle' },
-            3: { name: 'Citation Normalizer', color: 'agent-3', status: 'idle' },
-            4: { name: 'Legal Extractor', color: 'agent-4', status: 'idle' },
-            5: { name: 'Case Retriever', color: 'agent-5', status: 'idle' }
+        // Layer tracking with specific tasks
+        this.layers = {
+            perception: { 
+                name: 'Perception Layer', 
+                color: 'layer-perception', 
+                status: 'idle',
+                icon: '🧠',
+                tasks: {
+                    llm_processing: 'LLM Processing',
+                    model_selection: 'Model Selection',
+                    prompt_processing: 'Prompt Processing'
+                }
+            },
+            memory: { 
+                name: 'Memory Layer', 
+                color: 'layer-memory', 
+                status: 'idle',
+                icon: '💾',
+                tasks: {
+                    preference_loading: 'Loading Preferences',
+                    context_management: 'Context Management',
+                    session_storage: 'Session Storage'
+                }
+            },
+            decision: { 
+                name: 'Decision Layer', 
+                color: 'layer-decision', 
+                status: 'idle',
+                icon: '🎯',
+                tasks: {
+                    orchestration: 'Orchestration Planning',
+                    agent_sequencing: 'Agent Sequencing',
+                    validation: 'Plan Validation'
+                }
+            },
+            action: { 
+                name: 'Action Layer', 
+                color: 'layer-action', 
+                status: 'idle',
+                icon: '⚡',
+                tasks: {
+                    legal_extraction: 'Legal Extraction',
+                    brief_generation: 'Brief Generation',
+                    citation_normalization: 'Citation Normalization'
+                }
+            }
         };
         
         this.init();
@@ -32,15 +71,15 @@ class LawCaseFinder {
         this.showSection('upload');
     }
 
-    consoleLog(message, type = 'info', agentId = null) {
+    consoleLog(message, type = 'info', layerId = null) {
         // Simple console logging for debugging
         const timestamp = new Date().toLocaleTimeString();
-        const prefix = agentId ? `[Agent ${agentId}]` : '[LawCaseFinder]';
+        const prefix = layerId ? `[${this.layers[layerId]?.name || layerId}]` : '[LawCaseFinder]';
         console.log(`${timestamp} ${prefix} ${message}`);
         
         // Also log to the popup console if it exists
         if (typeof this.logToConsole === 'function') {
-            this.logToConsole(message, type, agentId);
+            this.logToConsole(message, type, layerId);
         }
     }
 
@@ -313,8 +352,29 @@ class LawCaseFinder {
         this.showLoading('extracting');
         
         // Log to console
-        this.logToConsole('🚀 Master Orchestrator starting analysis...', 'info');
-        this.updateAgentStatus(1, 'running', 'Starting document analysis');
+        this.logToConsole('🚀 Starting 4-Layer Cognitive Architecture...', 'info');
+        
+        // Memory Layer - Load preferences
+        this.updateLayerStatus('memory', 'running', 'preference_loading', 'Loading user preferences');
+        await this.loadConfig(); // This loads preferences
+        this.updateLayerStatus('memory', 'completed', 'preference_loading', 'Preferences loaded');
+        
+        // Decision Layer - Orchestration planning
+        try {
+            this.updateLayerStatus('decision', 'running', 'orchestration', 'Planning execution sequence');
+            const text = file.name; // Use filename for orchestration
+            const orchestrationPlan = await this.getOrchestrationPlan(`Analyze document: ${text}`);
+            if (orchestrationPlan) {
+                this.logToConsole(`📋 Orchestration Plan: ${orchestrationPlan.execution_sequence.join(' → ')}`, 'info');
+                this.logToConsole(`🎯 Confidence: ${orchestrationPlan.confidence}`, 'info');
+            }
+            this.updateLayerStatus('decision', 'completed', 'orchestration', 'Execution plan ready');
+        } catch (error) {
+            this.logToConsole(`⚠️ Orchestration failed, using default sequence: ${error.message}`, 'warning');
+        }
+        
+        // Action Layer - Legal extraction
+        this.updateLayerStatus('action', 'running', 'legal_extraction', 'Starting document analysis');
         
         try {
             const formData = new FormData();
@@ -334,8 +394,8 @@ class LawCaseFinder {
             this.handleAnalysisResult(result);
             
         } catch (error) {
-            this.updateAgentStatus(1, 'error', error.message);
-            this.logToConsole(`❌ Agent 1 failed: ${error.message}`, 'error', 1);
+            this.updateLayerStatus('action', 'error', 'legal_extraction', error.message);
+            this.logToConsole(`❌ Action Layer failed: ${error.message}`, 'error', 'action');
             this.showError(`Document analysis failed: ${error.message}`);
         }
     }
@@ -355,20 +415,22 @@ class LawCaseFinder {
         this.showLoading('extracting');
         
         // Log to console
-        this.logToConsole('🚀 Master Orchestrator starting analysis...', 'info');
+        this.logToConsole('🚀 Starting 4-Layer Cognitive Architecture...', 'info');
         
         // First, get orchestration plan
         try {
+            this.updateLayerStatus('decision', 'running', 'orchestration', 'Planning execution sequence');
             const orchestrationPlan = await this.getOrchestrationPlan(text);
             if (orchestrationPlan) {
                 this.logToConsole(`📋 Orchestration Plan: ${orchestrationPlan.execution_sequence.join(' → ')}`, 'info');
                 this.logToConsole(`🎯 Confidence: ${orchestrationPlan.confidence}`, 'info');
             }
+            this.updateLayerStatus('decision', 'completed', 'orchestration', 'Execution plan ready');
         } catch (error) {
             this.logToConsole(`⚠️ Orchestration failed, using default sequence: ${error.message}`, 'warning');
         }
         
-        this.updateAgentStatus(1, 'running', 'Starting document analysis');
+        this.updateLayerStatus('action', 'running', 'legal_extraction', 'Starting document analysis');
         
         try {
             const response = await fetch('http://localhost:3002/api/analyze-document', {
@@ -388,8 +450,8 @@ class LawCaseFinder {
             this.handleAnalysisResult(result);
             
         } catch (error) {
-            this.updateAgentStatus(1, 'error', error.message);
-            this.logToConsole(`❌ Agent 1 failed: ${error.message}`, 'error', 1);
+            this.updateLayerStatus('action', 'error', 'legal_extraction', error.message);
+            this.logToConsole(`❌ Action Layer failed: ${error.message}`, 'error', 'action');
             this.showError(`Text analysis failed: ${error.message}`);
         }
     }
@@ -403,7 +465,7 @@ class LawCaseFinder {
         this.showLoading('generating');
         
         // Log to console
-        this.updateAgentStatus(2, 'running', 'Starting brief generation');
+        this.updateLayerStatus('action', 'running', 'brief_generation', 'Creating comprehensive brief');
         
         try {
             const response = await fetch('http://localhost:3002/api/generate-brief', {
@@ -423,8 +485,8 @@ class LawCaseFinder {
             this.handleBriefResult(result);
             
         } catch (error) {
-            this.updateAgentStatus(2, 'error', error.message);
-            this.logToConsole(`❌ Agent 2 failed: ${error.message}`, 'error', 2);
+            this.updateLayerStatus('action', 'error', 'brief_generation', error.message);
+            this.logToConsole(`❌ Action Layer failed: ${error.message}`, 'error', 'action');
             this.showError(`Brief generation failed: ${error.message}`);
         }
     }
@@ -437,14 +499,14 @@ class LawCaseFinder {
             this.showSection('results');
             
             // Log success to console
-            this.updateAgentStatus(1, 'completed', 'Document analysis completed');
-            this.logAgentResult(1, this.extractedData, this.config.consoleDetail);
+            this.updateLayerStatus('action', 'completed', 'legal_extraction', 'Document analysis completed');
+            this.logLayerResult('action', 'legal_extraction', this.extractedData, this.config.consoleDetail);
             
             // Check if auto-generate brief is enabled
             await this.checkAutoGenerateBrief();
         } else {
-            this.updateAgentStatus(1, 'error', result.error || 'Analysis failed');
-            this.logToConsole(`❌ Agent 1 failed: ${result.error || 'Analysis failed'}`, 'error', 1);
+            this.updateLayerStatus('action', 'error', 'legal_extraction', result.error || 'Analysis failed');
+            this.logToConsole(`❌ Action Layer failed: ${result.error || 'Analysis failed'}`, 'error', 'action');
             this.showError(result.error || 'Analysis failed');
         }
     }
@@ -492,11 +554,11 @@ class LawCaseFinder {
             this.showSection('brief');
             
             // Log success to console
-            this.updateAgentStatus(2, 'completed', 'Brief generation completed');
-            this.logAgentResult(2, this.briefData, this.config.consoleDetail);
+            this.updateLayerStatus('action', 'completed', 'brief_generation', 'Brief generation completed');
+            this.logLayerResult('action', 'brief_generation', this.briefData, this.config.consoleDetail);
         } else {
-            this.updateAgentStatus(2, 'error', result.error || 'Brief generation failed');
-            this.logToConsole(`❌ Agent 2 failed: ${result.error || 'Brief generation failed'}`, 'error', 2);
+            this.updateLayerStatus('action', 'error', 'brief_generation', result.error || 'Brief generation failed');
+            this.logToConsole(`❌ Action Layer failed: ${result.error || 'Brief generation failed'}`, 'error', 'action');
             this.showError(result.error || 'Brief generation failed');
         }
     }
@@ -1168,7 +1230,7 @@ class LawCaseFinder {
     }
 
     // Console Methods
-    logToConsole(message, type = 'info', agentId = null) {
+    logToConsole(message, type = 'info', layerId = null) {
         const consoleOutput = document.getElementById('console-output');
         if (!consoleOutput) return;
 
@@ -1176,8 +1238,8 @@ class LawCaseFinder {
         const line = document.createElement('div');
         line.className = `console-line ${type}`;
         
-        if (agentId && this.agents[agentId]) {
-            line.classList.add(this.agents[agentId].color);
+        if (layerId && this.layers[layerId]) {
+            line.classList.add(this.layers[layerId].color);
         }
 
         const timestampSpan = document.createElement('span');
@@ -1203,7 +1265,11 @@ class LawCaseFinder {
         consoleOutput.innerHTML = `
             <div class="console-line console-info">
                 <span class="console-timestamp">[${new Date().toLocaleTimeString()}]</span>
-                <span class="console-text">🚀 Master Orchestrator initialized</span>
+                <span class="console-text">🚀 4-Layer Cognitive Architecture initialized</span>
+            </div>
+            <div class="console-line console-info">
+                <span class="console-timestamp">[${new Date().toLocaleTimeString()}]</span>
+                <span class="console-text">🧠 Perception → 💾 Memory → 🎯 Decision → ⚡ Action</span>
             </div>
             <div class="console-line console-info">
                 <span class="console-timestamp">[${new Date().toLocaleTimeString()}]</span>
@@ -1212,10 +1278,10 @@ class LawCaseFinder {
         `;
     }
 
-    updateAgentStatus(agentId, status, message = '') {
-        if (!this.agents[agentId]) return;
+    updateLayerStatus(layerId, status, task = '', message = '') {
+        if (!this.layers[layerId]) return;
 
-        this.agents[agentId].status = status;
+        this.layers[layerId].status = status;
         
         const statusEmoji = {
             'idle': '⏸️',
@@ -1224,44 +1290,56 @@ class LawCaseFinder {
             'error': '❌'
         };
 
-        const agentName = this.agents[agentId].name;
+        const layer = this.layers[layerId];
         const emoji = statusEmoji[status] || '❓';
+        const layerIcon = layer.icon;
+        
+        // Build the log message with layer and task
+        let logMessage = '';
+        if (task && layer.tasks[task]) {
+            logMessage = `${emoji} ${layerIcon} ${layer.name}: ${layer.tasks[task]}`;
+        } else {
+            logMessage = `${emoji} ${layerIcon} ${layer.name}`;
+        }
         
         if (message) {
-            this.logToConsole(`${emoji} Agent ${agentId}: ${agentName} - ${message}`, 'info', agentId);
-        } else {
-            this.logToConsole(`${emoji} Agent ${agentId}: ${agentName} - ${status}`, 'info', agentId);
+            logMessage += ` - ${message}`;
+        } else if (status !== 'idle') {
+            logMessage += ` - ${status}`;
         }
+        
+        this.logToConsole(logMessage, 'info', layerId);
     }
 
-    logAgentResult(agentId, result, detailLevel = 'summary') {
-        if (!this.agents[agentId] || !result) return;
+    logLayerResult(layerId, task, result, detailLevel = 'summary') {
+        if (!this.layers[layerId] || !result) return;
 
-        const agentName = this.agents[agentId].name;
-        this.logToConsole(`📊 Agent ${agentId}: ${agentName} Results:`, 'success', agentId);
+        const layer = this.layers[layerId];
+        const taskName = layer.tasks[task] || task;
+        this.logToConsole(`📊 ${layer.icon} ${layer.name}: ${taskName} Results:`, 'success', layerId);
 
         if (detailLevel === 'detailed') {
             // Log detailed results
             if (result.case_name) {
-                this.logToConsole(`   📄 Case Name: ${result.case_name}`, 'info', agentId);
+                this.logToConsole(`   📄 Case Name: ${result.case_name}`, 'info', layerId);
             }
             if (result.court) {
-                this.logToConsole(`   🏛️ Court: ${result.court}`, 'info', agentId);
+                this.logToConsole(`   🏛️ Court: ${result.court}`, 'info', layerId);
             }
             if (result.date) {
-                this.logToConsole(`   📅 Date: ${result.date}`, 'info', agentId);
+                this.logToConsole(`   📅 Date: ${result.date}`, 'info', layerId);
             }
             if (result.holdings) {
-                this.logToConsole(`   ⚖️ Holdings: ${result.holdings.length} found`, 'info', agentId);
+                this.logToConsole(`   ⚖️ Holdings: ${result.holdings.length} found`, 'info', layerId);
             }
             if (result.reasoning) {
-                this.logToConsole(`   💭 Reasoning: ${result.reasoning.length} points`, 'info', agentId);
+                this.logToConsole(`   💭 Reasoning: ${result.reasoning.length} points`, 'info', layerId);
             }
             if (result.citations) {
-                this.logToConsole(`   📚 Citations: ${result.citations.length} found`, 'info', agentId);
+                this.logToConsole(`   📚 Citations: ${result.citations.length} found`, 'info', layerId);
             }
             if (result.confidence_score) {
-                this.logToConsole(`   🎯 Confidence: ${result.confidence_score}`, 'info', agentId);
+                this.logToConsole(`   🎯 Confidence: ${result.confidence_score}%`, 'info', layerId);
             }
         } else {
             // Log summary results
@@ -1271,7 +1349,7 @@ class LawCaseFinder {
             if (result.word_count) summary.push(`Words: ${result.word_count}`);
             
             if (summary.length > 0) {
-                this.logToConsole(`   📋 ${summary.join(' | ')}`, 'info', agentId);
+                this.logToConsole(`   📋 ${summary.join(' | ')}`, 'info', layerId);
             }
         }
     }

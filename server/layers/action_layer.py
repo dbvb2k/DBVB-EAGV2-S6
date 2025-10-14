@@ -38,7 +38,8 @@ class ActionLayer:
     def extract_legal_information(
         self,
         document_text: str,
-        preferences: Optional[Dict[str, Any]] = None
+        preferences: Optional[Dict[str, Any]] = None,
+        detail_level: str = 'summary'
     ) -> Dict[str, Any]:
         """
         Extract structured legal information from document text
@@ -46,11 +47,19 @@ class ActionLayer:
         Args:
             document_text: The legal document text
             preferences: User preferences (if None, loaded from memory)
+            detail_level: 'summary' or 'detailed' for logging verbosity
             
         Returns:
             Extraction result with success status and extracted data
         """
         start_time = time.time()
+        
+        # Log based on detail level
+        if detail_level == 'detailed':
+            print(f"  ⚡ [Action Layer] Legal Extraction - Starting")
+            print(f"  [Action] Document length: {len(document_text)} characters")
+        else:
+            print(f"  ⚡ [Action Layer] Legal Extraction - Starting")
         
         try:
             # Validate input
@@ -87,7 +96,8 @@ class ActionLayer:
             result = self.perception.process_with_llm(
                 prompt=prompt,
                 preferred_model=preferred_model,
-                temperature=temperature
+                temperature=temperature,
+                detail_level=detail_level
             )
             
             if not result['success']:
@@ -112,6 +122,8 @@ class ActionLayer:
             
             # Validate and enhance extracted data
             enhanced_data = self._enhance_extraction_data(extracted_data)
+            
+            print(f"  ✅ [Action Layer] Legal Extraction - Completed (Confidence: {confidence:.2%})")
             
             return {
                 'success': True,
@@ -195,7 +207,8 @@ class ActionLayer:
     def generate_legal_brief(
         self,
         extracted_data: Dict[str, Any],
-        preferences: Optional[Dict[str, Any]] = None
+        preferences: Optional[Dict[str, Any]] = None,
+        detail_level: str = 'summary'
     ) -> Dict[str, Any]:
         """
         Generate legal brief from extracted data
@@ -203,11 +216,19 @@ class ActionLayer:
         Args:
             extracted_data: Extracted legal information
             preferences: User preferences (if None, loaded from memory)
+            detail_level: 'summary' or 'detailed' for logging verbosity
             
         Returns:
             Brief generation result with success status and generated brief
         """
         start_time = time.time()
+        
+        # Log based on detail level
+        if detail_level == 'detailed':
+            print(f"  ⚡ [Action Layer] Brief Generation - Starting")
+            print(f"  [Action] Extracted fields: {list(extracted_data.keys())}")
+        else:
+            print(f"  ⚡ [Action Layer] Brief Generation - Starting")
         
         try:
             # Validate input
@@ -264,7 +285,8 @@ class ActionLayer:
             result = self.perception.process_with_llm(
                 prompt=prompt,
                 preferred_model=preferred_model,
-                temperature=temperature
+                temperature=temperature,
+                detail_level=detail_level
             )
             
             if not result['success']:
@@ -286,6 +308,8 @@ class ActionLayer:
             
             # Enhance brief data
             enhanced_brief = self._enhance_brief_data(brief_data, extracted_data)
+            
+            print(f"  ✅ [Action Layer] Brief Generation - Completed (Word count: {enhanced_brief.get('word_count', 0)})")
             
             return {
                 'success': True,
