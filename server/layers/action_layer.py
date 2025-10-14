@@ -90,7 +90,7 @@ class ActionLayer:
             # Get LLM preferences
             llm_prefs = preferences.get('llm', {})
             preferred_model = llm_prefs.get('primary_model', 'gemini')
-            temperature = llm_prefs.get('temperature', 0.1)
+            temperature = float(llm_prefs.get('temperature', 0.1))
             
             # Process with LLM
             result = self.perception.process_with_llm(
@@ -279,7 +279,7 @@ class ActionLayer:
             # Get LLM preferences
             llm_prefs = preferences.get('llm', {})
             preferred_model = llm_prefs.get('primary_model', 'gemini')
-            temperature = llm_prefs.get('temperature', 0.2)
+            temperature = float(llm_prefs.get('temperature', 0.2))
             
             # Process with LLM
             result = self.perception.process_with_llm(

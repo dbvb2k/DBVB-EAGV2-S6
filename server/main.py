@@ -38,6 +38,12 @@ app.config.from_object(Config)
 # Enable CORS for Chrome extension
 CORS(app, origins=["chrome-extension://*", "http://localhost:*"])
 
+# WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+# E0000 00:00:1760442224.250115  250764 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+# To disable the above warning, set the GRPC_VERBOSITY environment variable to ERROR
+os.environ["GRPC_VERBOSITY"] = "ERROR"
+
+
 # ========== LOGGING SETUP ==========
 
 _llm_logger = None

@@ -22,13 +22,13 @@ class Config:
     # Server Configuration
     FLASK_ENV = os.getenv('FLASK_ENV', 'development')
     FLASK_DEBUG = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
-    PORT = int(os.getenv('PORT', 3001))
+    PORT = int(os.getenv('PORT', 3002))
     
     # AI Model Configuration
     PRIMARY_MODEL = os.getenv('PRIMARY_MODEL', 'gemini')
     FALLBACK_MODEL = os.getenv('FALLBACK_MODEL', 'ollama')
     GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-001')  # Correct model name
-    OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama2')
+    OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3:8b')
     
     # Legal Database Configuration
     ENABLE_CASE_RETRIEVAL = os.getenv('ENABLE_CASE_RETRIEVAL', 'false').lower() == 'true'

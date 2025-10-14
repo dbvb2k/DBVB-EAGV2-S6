@@ -15,6 +15,11 @@
                     <span class="logo-icon">⚖️</span>
                     <h1>Law Case Finder</h1>
                 </div>
+                <div class="header-settings">
+                    <button id="settings-btn" class="settings-button" title="Open Settings">
+                        <span class="settings-icon">⚙️</span>
+                    </button>
+                </div>
                 <div class="header-subtitle">
                     AI-Powered Legal Analysis
                 </div>
@@ -288,82 +293,99 @@ Example: Copy and paste text from a court judgment, legal opinion, or case docum
             </div>
         </div>
 
-        <!-- Footer -->
-        <footer class="app-footer">
-            <div class="config-panel">
-                <div class="config-header" id="config-header">
-                    <span class="config-title">⚙️ Settings</span>
-                    <span class="expand-icon" id="config-expand-icon">▶</span>
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="settings-modal">
+            <div class="settings-modal-content">
+                <div class="settings-modal-header">
+                    <h2>⚙️ Settings</h2>
+                    <button id="close-settings-btn" class="close-settings-btn" title="Close Settings">
+                        <span>✕</span>
+                    </button>
                 </div>
-                <div id="config-content" class="config-content" style="display: none;">
+                
+                <div class="settings-modal-body">
                     <!-- General Settings -->
-                    <div class="config-section">
-                        <h4>⚙️ General Settings</h4>
-                        <div class="config-group">
-                            <label class="config-label">Output Format:</label>
-                            <select name="outputFormat" class="config-select">
+                    <div class="settings-section">
+                        <h3>⚙️ General Settings</h3>
+                        <div class="settings-group">
+                            <label class="settings-label">Output Format:</label>
+                            <select name="outputFormat" class="settings-select">
                                 <option value="plain_text">Plain Text</option>
                                 <option value="pdf">PDF</option>
                                 <option value="markdown">Markdown</option>
+                                <option value="html">HTML</option>
                             </select>
                         </div>
-                        <div class="config-group">
-                            <label class="config-label">Language:</label>
-                            <select name="language" class="config-select">
+                        <div class="settings-group">
+                            <label class="settings-label">Output Language:</label>
+                            <select name="outputLanguage" class="settings-select">
                                 <option value="en">English</option>
                                 <option value="es">Spanish</option>
                                 <option value="fr">French</option>
                                 <option value="de">German</option>
-                                <option value="pt">Portuguese</option>
                             </select>
                         </div>
-                        <div class="config-group">
-                            <label class="config-label">Verbosity Level:</label>
-                            <select name="verbosityLevel" class="config-select">
-                                <option value="minimal">Minimal</option>
-                                <option value="standard" selected>Standard</option>
-                                <option value="detailed">Detailed</option>
-                            </select>
+                        <div class="settings-group">
+                            <label class="settings-label">Verbosity Level:</label>
+                            <div class="settings-radio-group">
+                                <label class="settings-radio">
+                                    <input type="radio" name="verbosityLevel" value="minimal">
+                                    <span>Minimal</span>
+                                </label>
+                                <label class="settings-radio">
+                                    <input type="radio" name="verbosityLevel" value="standard" checked>
+                                    <span>Standard</span>
+                                </label>
+                                <label class="settings-radio">
+                                    <input type="radio" name="verbosityLevel" value="detailed">
+                                    <span>Detailed</span>
+                                </label>
+                            </div>
                         </div>
-                        <div class="config-group">
-                            <label class="config-checkbox">
-                                <input type="checkbox" name="autoGenerateBrief">
+                        <div class="settings-group">
+                            <label class="settings-checkbox">
+                                <input type="checkbox" name="autoGenerateBrief" checked>
                                 <span>Auto-generate Brief after extraction</span>
                             </label>
                         </div>
                     </div>
 
                     <!-- AI Model Settings -->
-                    <div class="config-section">
-                        <h4>🤖 AI Model Settings</h4>
-                        <div class="config-group">
-                            <label class="config-label">Primary Model:</label>
-                            <div class="model-options">
-                                <label class="model-option">
+                    <div class="settings-section">
+                        <h3>🤖 AI Model Settings</h3>
+                        <div class="settings-group">
+                            <label class="settings-label">Primary Model:</label>
+                            <div class="settings-radio-group">
+                                <label class="settings-radio">
                                     <input type="radio" name="primaryModel" value="gemini" checked>
-                                    <span class="model-name">
-                                        🌟 Gemini Flash 2.0
-                                        <small>Cloud-based, high accuracy</small>
-                                    </span>
+                                    <span>Gemini Pro</span>
                                 </label>
-                                <label class="model-option">
+                                <label class="settings-radio">
                                     <input type="radio" name="primaryModel" value="ollama">
-                                    <span class="model-name">
-                                        🏠 Ollama
-                                        <small>Local, privacy-focused</small>
-                                    </span>
+                                    <span>Ollama (Local)</span>
                                 </label>
                             </div>
                         </div>
-                        <div class="config-group">
-                            <label class="config-label">Fallback Model:</label>
-                            <select name="fallbackModel" class="config-select">
-                                <option value="ollama" selected>Ollama</option>
-                                <option value="gemini">Gemini</option>
-                            </select>
+                        <div class="settings-group">
+                            <label class="settings-label">Fallback Model:</label>
+                            <div class="settings-radio-group">
+                                <label class="settings-radio">
+                                    <input type="radio" name="fallbackModel" value="ollama" checked>
+                                    <span>Ollama (Local)</span>
+                                </label>
+                                <label class="settings-radio">
+                                    <input type="radio" name="fallbackModel" value="gemini">
+                                    <span>Gemini Pro</span>
+                                </label>
+                            </div>
                         </div>
-                        <div class="config-group">
-                            <label class="config-checkbox">
+                        <div class="settings-group">
+                            <label class="settings-label">Temperature:</label>
+                            <input type="range" name="temperature" min="0" max="1" step="0.1" value="0.3" class="settings-range">
+                            <span class="settings-range-value">0.3</span>
+                        </div>
+                        <div class="settings-group">
+                            <label class="settings-checkbox">
                                 <input type="checkbox" name="enableFallback" checked>
                                 <span>Enable fallback model if primary fails</span>
                             </label>
@@ -371,67 +393,74 @@ Example: Copy and paste text from a court judgment, legal opinion, or case docum
                     </div>
 
                     <!-- Citation Settings -->
-                    <div class="config-section">
-                        <h4>📚 Citation Settings</h4>
-                        <div class="config-group">
-                            <label class="config-label">Citation Format:</label>
-                            <div class="citation-formats">
-                                <label class="citation-option">
+                    <div class="settings-section">
+                        <h3>📚 Citation Settings</h3>
+                        <div class="settings-group">
+                            <label class="settings-label">Citation Format:</label>
+                            <div class="settings-radio-group">
+                                <label class="settings-radio">
                                     <input type="radio" name="citationFormat" value="bluebook" checked>
-                                    <span class="citation-name">📘 Bluebook</span>
+                                    <span>Bluebook</span>
                                 </label>
-                                <label class="citation-option">
+                                <label class="settings-radio">
                                     <input type="radio" name="citationFormat" value="apa">
-                                    <span class="citation-name">📗 APA</span>
+                                    <span>APA</span>
                                 </label>
-                                <label class="citation-option">
+                                <label class="settings-radio">
                                     <input type="radio" name="citationFormat" value="mla">
-                                    <span class="citation-name">📙 MLA</span>
+                                    <span>MLA</span>
                                 </label>
-                                <label class="citation-option">
+                                <label class="settings-radio">
                                     <input type="radio" name="citationFormat" value="chicago">
-                                    <span class="citation-name">📕 Chicago</span>
+                                    <span>Chicago</span>
                                 </label>
                             </div>
                         </div>
-                        <div class="config-group">
-                            <label class="config-checkbox">
-                                <input type="checkbox" name="includeCitationsInBrief" checked>
-                                <span>Include citations in generated brief</span>
-                            </label>
-                        </div>
-                        <div class="config-group">
-                            <label class="config-checkbox">
-                                <input type="checkbox" name="normalizeCitations" checked>
-                                <span>Automatically normalize citations</span>
-                            </label>
+                        <div class="settings-group">
+                            <div class="settings-checkbox-group">
+                                <label class="settings-checkbox">
+                                    <input type="checkbox" name="includeCitations" checked>
+                                    <span>Include citations in output</span>
+                                </label>
+                                <label class="settings-checkbox">
+                                    <input type="checkbox" name="includePinpoints" checked>
+                                    <span>Include pinpoint citations</span>
+                                </label>
+                                <label class="settings-checkbox">
+                                    <input type="checkbox" name="normalizeCitations" checked>
+                                    <span>Automatically normalize citations</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Privacy Settings -->
-                    <div class="config-section">
-                        <h4>🔒 Privacy Settings</h4>
-                        <div class="config-group">
-                            <label class="config-checkbox">
-                                <input type="checkbox" name="storeAnalysisResults" checked>
-                                <span>Save analysis results for history</span>
-                            </label>
+                    <div class="settings-section">
+                        <h3>🔒 Privacy Settings</h3>
+                        <div class="settings-group">
+                            <div class="settings-checkbox-group">
+                                <label class="settings-checkbox">
+                                    <input type="checkbox" name="storeAnalysisResults" checked>
+                                    <span>Save analysis results for history</span>
+                                </label>
+                                <label class="settings-checkbox">
+                                    <input type="checkbox" name="storeDocuments">
+                                    <span>Store uploaded documents (not recommended)</span>
+                                </label>
+                            </div>
                         </div>
-                        <div class="config-group">
-                            <label class="config-checkbox">
-                                <input type="checkbox" name="storeDocuments">
-                                <span>Store uploaded documents (not recommended)</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="config-actions">
-                        <button id="save-preferences-btn" class="action-btn primary">💾 Save Preferences</button>
-                        <button id="reset-preferences-btn" class="action-btn secondary">🔄 Reset to Defaults</button>
                     </div>
                 </div>
+                
+                <div class="settings-modal-footer">
+                    <button id="save-preferences-btn" class="settings-btn primary">💾 Save Preferences</button>
+                    <button id="reset-preferences-btn" class="settings-btn secondary">🔄 Reset to Defaults</button>
+                </div>
             </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
             <div class="footer-info">
                 <span class="version">v1.0.0</span>
                 <span class="disclaimer">Not legal advice • For educational purposes only</span>

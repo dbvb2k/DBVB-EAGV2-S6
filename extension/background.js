@@ -112,7 +112,7 @@ async function handleAnalyzeSelection(data, sendResponse) {
 // Check if backend server is running
 async function handleCheckServerStatus(sendResponse) {
   try {
-    const response = await fetch('http://localhost:3001/health', {
+    const response = await fetch('http://localhost:3002/health', {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -131,7 +131,7 @@ async function handleCheckServerStatus(sendResponse) {
     console.error('Server health check failed:', error);
     sendResponse({ 
       success: false, 
-      error: 'Backend server is not accessible. Please ensure it is running on port 3001.' 
+      error: 'Backend server is not accessible. Please ensure it is running on port 3002.' 
     });
   }
 }

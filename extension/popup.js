@@ -84,6 +84,38 @@ class LawCaseFinder {
     }
 
     setupEventListeners() {
+        // Settings Modal
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsModal = document.getElementById('settings-modal');
+        const closeSettingsBtn = document.getElementById('close-settings-btn');
+        
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', () => this.openSettingsModal());
+        }
+        
+        if (closeSettingsBtn) {
+            closeSettingsBtn.addEventListener('click', () => this.closeSettingsModal());
+        }
+        
+        if (settingsModal) {
+            settingsModal.addEventListener('click', (e) => {
+                if (e.target === settingsModal) {
+                    this.closeSettingsModal();
+                }
+            });
+        }
+        
+        // Temperature range slider
+        const temperatureRange = document.querySelector('input[name="temperature"]');
+        if (temperatureRange) {
+            temperatureRange.addEventListener('input', (e) => {
+                const valueSpan = document.querySelector('.settings-range-value');
+                if (valueSpan) {
+                    valueSpan.textContent = e.target.value;
+                }
+            });
+        }
+        
         // Preference management
         const savePrefsBtn = document.getElementById('save-preferences-btn');
         const resetPrefsBtn = document.getElementById('reset-preferences-btn');
@@ -170,8 +202,7 @@ class LawCaseFinder {
             });
         });
 
-        // Config panel
-        document.getElementById('config-header').addEventListener('click', this.toggleConfig.bind(this));
+        // Config panel (removed - now using modal)
         
         // Config changes
         document.querySelectorAll('input[name="primaryModel"]').forEach(input => {
@@ -901,19 +932,6 @@ class LawCaseFinder {
         this.showSection('error');
     }
 
-    toggleConfig() {
-        const content = document.getElementById('config-content');
-        const icon = document.getElementById('config-expand-icon');
-        
-        if (content.style.display === 'none') {
-            content.style.display = 'block';
-            icon.textContent = '▼'; // Down arrow when expanded
-        } else {
-            content.style.display = 'none';
-            icon.textContent = '▶'; // Right arrow when collapsed
-        }
-    }
-
     toggleConsole() {
         const content = document.getElementById('console-content');
         const icon = document.getElementById('console-expand-icon');
@@ -1014,54 +1032,62 @@ class LawCaseFinder {
     }
 
     async savePreferencesToServer() {
-        this.consoleLog('Saving preferences to server...', 'info');
+        this.consoleLog('Saving preferences...', 'info');
         
         try {
             // Collect all preferences from UI
             const preferences = {
                 general: {
-                    output_format: document.querySelector('select[name="outputFormat"]').value,
-                    language: document.querySelector('select[name="language"]').value,
-                    verbosity_level: document.querySelector('select[name="verbosityLevel"]').value,
-                    auto_generate_brief: document.querySelector('input[name="autoGenerateBrief"]').checked
+                    output_format: document.querySelector('select[name="outputFormat"]')?.value || 'json',
+                    language: document.querySelector('select[name="outputLanguage"]')?.value || 'en',
+                    verbosity_level: document.querySelector('input[name="verbosityLevel"]:checked')?.value || 'standard',
+                    auto_generate_brief: document.querySelector('input[name="autoGenerateBrief"]')?.checked || false
                 },
                 llm: {
-                    primary_model: document.querySelector('input[name="primaryModel"]:checked').value,
-                    fallback_model: document.querySelector('select[name="fallbackModel"]').value,
-                    enable_fallback: document.querySelector('input[name="enableFallback"]').checked
+                    primary_model: document.querySelector('input[name="primaryModel"]:checked')?.value || 'gemini',
+                    fallback_model: document.querySelector('input[name="fallbackModel"]:checked')?.value || 'ollama',
+                    temperature: document.querySelector('input[name="temperature"]')?.value || '0.3',
+                    enable_fallback: document.querySelector('input[name="enableFallback"]')?.checked || false
                 },
                 citation: {
-                    format: document.querySelector('input[name="citationFormat"]:checked').value,
-                    include_citations_in_brief: document.querySelector('input[name="includeCitationsInBrief"]').checked,
-                    normalize_citations: document.querySelector('input[name="normalizeCitations"]').checked
+                    format: document.querySelector('input[name="citationFormat"]:checked')?.value || 'bluebook',
+                    include_citations: document.querySelector('input[name="includeCitations"]')?.checked || true,
+                    include_pinpoints: document.querySelector('input[name="includePinpoints"]')?.checked || true,
+                    normalize_citations: document.querySelector('input[name="normalizeCitations"]')?.checked || true
                 },
                 privacy: {
-                    store_analysis_results: document.querySelector('input[name="storeAnalysisResults"]').checked,
-                    store_documents: document.querySelector('input[name="storeDocuments"]').checked
+                    store_analysis_results: document.querySelector('input[name="storeAnalysisResults"]')?.checked || true,
+                    store_documents: document.querySelector('input[name="storeDocuments"]')?.checked || false
                 }
             };
             
-            // Save to server for each category
-            for (const [category, updates] of Object.entries(preferences)) {
-                const response = await fetch(`${this.config.serverUrl || 'http://localhost:3002'}/api/preferences`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ category, updates })
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`Failed to save ${category} preferences`);
-                }
-            }
-            
-            // Also save to local storage as backup
+            // Always save to local storage first
             this.config.primaryModel = preferences.llm.primary_model;
             this.config.citationFormat = preferences.citation.format;
+            this.config.autoGenerateBrief = preferences.general.auto_generate_brief;
             localStorage.setItem('lawCaseFinderConfig', JSON.stringify(this.config));
             
-            this.consoleLog('✓ Preferences saved successfully', 'success');
+            // Try to save to server (optional)
+            try {
+                for (const [category, updates] of Object.entries(preferences)) {
+                    const response = await fetch(`${this.config.serverUrl || 'http://localhost:3002'}/api/preferences`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ category, updates })
+                    });
+                    
+                    if (!response.ok) {
+                        console.warn(`Failed to save ${category} preferences to server, but saved locally`);
+                    }
+                }
+                this.consoleLog('✓ Preferences saved to server and locally', 'success');
+            } catch (serverError) {
+                console.warn('Server not available, preferences saved locally only:', serverError);
+                this.consoleLog('✓ Preferences saved locally (server unavailable)', 'success');
+            }
+            
             alert('Preferences saved successfully!');
         } catch (error) {
             console.error('Failed to save preferences:', error);
@@ -1078,25 +1104,118 @@ class LawCaseFinder {
         this.consoleLog('Resetting preferences to defaults...', 'info');
         
         try {
-            const response = await fetch(`${this.config.serverUrl || 'http://localhost:3002'}/api/preferences`, {
-                method: 'DELETE'
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    this.applyPreferencesToUI(data.preferences);
-                    this.consoleLog('✓ Preferences reset to defaults', 'success');
-                    alert('Preferences reset to defaults!');
-                    return;
+            // Reset to default values
+            const defaultPreferences = {
+                general: {
+                    output_format: 'json',
+                    language: 'en',
+                    verbosity_level: 'standard',
+                    auto_generate_brief: true
+                },
+                llm: {
+                    primary_model: 'gemini',
+                    fallback_model: 'ollama',
+                    temperature: '0.3',
+                    enable_fallback: true
+                },
+                citation: {
+                    format: 'bluebook',
+                    include_citations: true,
+                    include_pinpoints: true,
+                    normalize_citations: true
+                },
+                privacy: {
+                    store_analysis_results: true,
+                    store_documents: false
                 }
+            };
+            
+            // Apply defaults to UI
+            this.applyDefaultPreferencesToUI(defaultPreferences);
+            
+            // Save to local storage
+            this.config.primaryModel = defaultPreferences.llm.primary_model;
+            this.config.citationFormat = defaultPreferences.citation.format;
+            this.config.autoGenerateBrief = defaultPreferences.general.auto_generate_brief;
+            localStorage.setItem('lawCaseFinderConfig', JSON.stringify(this.config));
+            
+            // Try to reset on server (optional)
+            try {
+                const response = await fetch(`${this.config.serverUrl || 'http://localhost:3002'}/api/preferences`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    this.consoleLog('✓ Preferences reset to defaults (server and local)', 'success');
+                } else {
+                    this.consoleLog('✓ Preferences reset to defaults (local only)', 'success');
+                }
+            } catch (serverError) {
+                console.warn('Server not available, preferences reset locally only:', serverError);
+                this.consoleLog('✓ Preferences reset to defaults (local only)', 'success');
             }
             
-            throw new Error('Failed to reset preferences');
+            alert('Preferences reset to defaults!');
         } catch (error) {
             console.error('Failed to reset preferences:', error);
             this.consoleLog('✗ Failed to reset preferences: ' + error.message, 'error');
             alert('Failed to reset preferences. Please try again.');
+        }
+    }
+
+    applyDefaultPreferencesToUI(preferences) {
+        // Apply general settings
+        if (preferences.general) {
+            const outputFormatSelect = document.querySelector('select[name="outputFormat"]');
+            if (outputFormatSelect) outputFormatSelect.value = preferences.general.output_format || 'json';
+            
+            const languageSelect = document.querySelector('select[name="outputLanguage"]');
+            if (languageSelect) languageSelect.value = preferences.general.language || 'en';
+            
+            const verbosityRadio = document.querySelector(`input[name="verbosityLevel"][value="${preferences.general.verbosity_level || 'standard'}"]`);
+            if (verbosityRadio) verbosityRadio.checked = true;
+            
+            const autoBriefCheckbox = document.querySelector('input[name="autoGenerateBrief"]');
+            if (autoBriefCheckbox) autoBriefCheckbox.checked = preferences.general.auto_generate_brief || false;
+        }
+        
+        // Apply LLM settings
+        if (preferences.llm) {
+            const primaryModelRadio = document.querySelector(`input[name="primaryModel"][value="${preferences.llm.primary_model || 'gemini'}"]`);
+            if (primaryModelRadio) primaryModelRadio.checked = true;
+            
+            const fallbackModelRadio = document.querySelector(`input[name="fallbackModel"][value="${preferences.llm.fallback_model || 'ollama'}"]`);
+            if (fallbackModelRadio) fallbackModelRadio.checked = true;
+            
+            const temperatureRange = document.querySelector('input[name="temperature"]');
+            if (temperatureRange) temperatureRange.value = preferences.llm.temperature || '0.3';
+            
+            const enableFallbackCheckbox = document.querySelector('input[name="enableFallback"]');
+            if (enableFallbackCheckbox) enableFallbackCheckbox.checked = preferences.llm.enable_fallback || false;
+        }
+        
+        // Apply citation settings
+        if (preferences.citation) {
+            const citationFormatRadio = document.querySelector(`input[name="citationFormat"][value="${preferences.citation.format || 'bluebook'}"]`);
+            if (citationFormatRadio) citationFormatRadio.checked = true;
+            
+            const includeCitationsCheckbox = document.querySelector('input[name="includeCitations"]');
+            if (includeCitationsCheckbox) includeCitationsCheckbox.checked = preferences.citation.include_citations || true;
+            
+            const includePinpointsCheckbox = document.querySelector('input[name="includePinpoints"]');
+            if (includePinpointsCheckbox) includePinpointsCheckbox.checked = preferences.citation.include_pinpoints || true;
+            
+            const normalizeCitationsCheckbox = document.querySelector('input[name="normalizeCitations"]');
+            if (normalizeCitationsCheckbox) normalizeCitationsCheckbox.checked = preferences.citation.normalize_citations || true;
+        }
+        
+        // Apply privacy settings
+        if (preferences.privacy) {
+            const storeResultsCheckbox = document.querySelector('input[name="storeAnalysisResults"]');
+            if (storeResultsCheckbox) storeResultsCheckbox.checked = preferences.privacy.store_analysis_results || true;
+            
+            const storeDocumentsCheckbox = document.querySelector('input[name="storeDocuments"]');
+            if (storeDocumentsCheckbox) storeDocumentsCheckbox.checked = preferences.privacy.store_documents || false;
         }
     }
 
@@ -1351,6 +1470,23 @@ class LawCaseFinder {
             if (summary.length > 0) {
                 this.logToConsole(`   📋 ${summary.join(' | ')}`, 'info', layerId);
             }
+        }
+    }
+
+    // Settings Modal Methods
+    openSettingsModal() {
+        const modal = document.getElementById('settings-modal');
+        if (modal) {
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+    }
+
+    closeSettingsModal() {
+        const modal = document.getElementById('settings-modal');
+        if (modal) {
+            modal.classList.remove('active');
+            document.body.style.overflow = ''; // Restore scrolling
         }
     }
 }

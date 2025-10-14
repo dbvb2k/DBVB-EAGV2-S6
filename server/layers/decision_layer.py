@@ -114,7 +114,7 @@ class DecisionLayer:
             # Get LLM preferences from memory
             llm_prefs = preferences.get('llm', {})
             preferred_model = llm_prefs.get('primary_model', 'gemini')
-            temperature = llm_prefs.get('temperature', 0.1)
+            temperature = float(llm_prefs.get('temperature', 0.1))
             
             # Use Perception Layer to get orchestration decision
             result = self.perception.process_with_llm(

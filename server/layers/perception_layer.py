@@ -45,9 +45,9 @@ class PerceptionLayer:
             
             # Ollama setup (no API key needed)
             print(f"  → Checking Ollama availability at {self.config.OLLAMA_BASE_URL}...")
-            self.ollama_available = self._check_ollama_availability()
+            self.ollama_available, self.available_ollama_model = self._check_ollama_availability()
             if self.ollama_available:
-                print(f"  ✓ Ollama is available: {self.config.OLLAMA_MODEL}")
+                print(f"  ✓ Ollama is available: {self.available_ollama_model}")
             else:
                 print(f"  ⚠ Ollama is not available")
             
@@ -69,14 +69,53 @@ class PerceptionLayer:
             traceback.print_exc()
             self.gemini_model = None
             self.ollama_available = False
+            self.available_ollama_model = None
     
-    def _check_ollama_availability(self) -> bool:
-        """Check if Ollama is available"""
+    def _check_ollama_availability(self) -> tuple[bool, str]:
+        """Check if Ollama is available and has the required model
+        
+        Returns:
+            tuple: (is_available, model_name)
+        """
         try:
+            # First check if Ollama is running
             response = requests.get(f"{self.config.OLLAMA_BASE_URL}/api/tags", timeout=5)
-            return response.status_code == 200
-        except:
-            return False
+            if response.status_code != 200:
+                return False, None
+            
+            # Check if the required model is available
+            models_data = response.json()
+            available_models = [model['name'] for model in models_data.get('models', [])]
+            
+            # Check for exact match or partial match (e.g., 'llama3:8b' matches 'llama3')
+            required_model = self.config.OLLAMA_MODEL
+            model_found = False
+            found_model = None
+            
+            for model_name in available_models:
+                if (model_name == required_model or 
+                    model_name.startswith(required_model.split(':')[0]) or
+                    required_model.startswith(model_name.split(':')[0])):
+                    model_found = True
+                    found_model = model_name
+                    print(f"  ✓ Found Ollama model: {model_name} (required: {required_model})")
+                    break
+            
+            if not model_found:
+                print(f"  ⚠ Ollama running but required model '{required_model}' not found")
+                print(f"  Available models: {available_models}")
+                # Use the first available model as fallback
+                if available_models:
+                    found_model = available_models[0]
+                    print(f"  → Using fallback model: {found_model}")
+                    return True, found_model
+                else:
+                    return False, None
+            
+            return True, found_model
+        except Exception as e:
+            print(f"  ⚠ Ollama availability check failed: {e}")
+            return False, None
     
     def process_with_llm(
         self,
@@ -133,6 +172,8 @@ class PerceptionLayer:
                 result['processing_time'] = time.time() - start_time
                 print(f"  ✅ [Perception Layer] LLM Processing - Completed (Gemini)")
                 return result
+            else:
+                print(f"  [Perception] Gemini failed: {result.get('error', 'Unknown error')}")
         
         if primary == 'ollama' and self.ollama_available:
             if detail_level == 'detailed':
@@ -143,6 +184,8 @@ class PerceptionLayer:
                 result['processing_time'] = time.time() - start_time
                 print(f"  ✅ [Perception Layer] LLM Processing - Completed (Ollama)")
                 return result
+            else:
+                print(f"  [Perception] Ollama failed: {result.get('error', 'Unknown error')}")
         
         # Try fallback model
         print(f"  [Perception] Primary failed or unavailable, trying fallback...")
@@ -153,6 +196,8 @@ class PerceptionLayer:
                 result['model_used'] = 'gemini (fallback)'
                 result['processing_time'] = time.time() - start_time
                 return result
+            else:
+                print(f"  [Perception] Gemini fallback failed: {result.get('error', 'Unknown error')}")
         
         if fallback == 'ollama' and self.ollama_available:
             print(f"  [Perception] Attempting Ollama (fallback)...")
@@ -161,6 +206,8 @@ class PerceptionLayer:
                 result['model_used'] = 'ollama (fallback)'
                 result['processing_time'] = time.time() - start_time
                 return result
+            else:
+                print(f"  [Perception] Ollama fallback failed: {result.get('error', 'Unknown error')}")
         
         # No model available
         print(f"  [Perception] ❌ ERROR: No LLM models available!")
@@ -183,21 +230,28 @@ class PerceptionLayer:
         max_retries: int = 2
     ) -> Dict[str, Any]:
         """Process with Gemini model"""
+        print(f"  [Perception] Gemini processing - Model: {self.config.GEMINI_MODEL}")
+        
         for attempt in range(max_retries):
             try:
                 generation_config = {
-                    "temperature": temperature,
+                    "temperature": float(temperature),
                     "top_p": 0.95,
                     "top_k": 40,
                     "max_output_tokens": 8192,
                 }
+                
+                print(f"  [Perception] Gemini generation config: {generation_config}")
                 
                 response = self.gemini_model.generate_content(
                     prompt,
                     generation_config=generation_config
                 )
                 
+                print(f"  [Perception] Gemini response received: {bool(response.text)}")
+                
                 if not response.text:
+                    print(f"  [Perception] Gemini empty response")
                     if attempt < max_retries - 1:
                         time.sleep(1)
                         continue
@@ -233,16 +287,20 @@ class PerceptionLayer:
         max_retries: int = 2
     ) -> Dict[str, Any]:
         """Process with Ollama model"""
+        print(f"  [Perception] Ollama processing - Model: {self.available_ollama_model}")
+        
         for attempt in range(max_retries):
             try:
                 payload = {
-                    "model": self.config.OLLAMA_MODEL,
+                    "model": self.available_ollama_model,  # Use the actual available model
                     "prompt": prompt,
                     "stream": False,
                     "options": {
-                        "temperature": temperature
+                        "temperature": float(temperature)
                     }
                 }
+                
+                print(f"  [Perception] Ollama request payload: {payload}")
                 
                 response = requests.post(
                     f"{self.config.OLLAMA_BASE_URL}/api/generate",
@@ -250,7 +308,10 @@ class PerceptionLayer:
                     timeout=120
                 )
                 
+                print(f"  [Perception] Ollama response status: {response.status_code}")
+                
                 if response.status_code != 200:
+                    print(f"  [Perception] Ollama HTTP error: {response.status_code} - {response.text}")
                     if attempt < max_retries - 1:
                         time.sleep(1)
                         continue
