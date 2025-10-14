@@ -1607,8 +1607,30 @@ button:focus {
   transform: translateY(-1px);
 }
 
-.settings-btn:active {
-  transform: translateY(0);
+.settings-delay-input {
+  width: 80px;
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 12px;
+  background: white;
+  transition: border-color 0.2s ease;
+}
+
+.settings-delay-input:focus {
+  outline: none;
+  border-color: #2a5298;
+}
+
+.delay-input-container {
+  margin-left: 24px;
+  margin-top: 8px;
+}
+
+.delay-input-container .settings-label {
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: #6c757d;
 }
 
 /* Responsive adjustments */
