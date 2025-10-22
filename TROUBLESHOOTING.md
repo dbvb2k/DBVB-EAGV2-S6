@@ -24,14 +24,17 @@ GEMINI_MODEL=gemini-2.0-flash-exp
 # CORRECT ✅
 GEMINI_MODEL=gemini-2.0-flash-001
 # OR use stable version
-GEMINI_MODEL=gemini-1.5-flash
+GEMINI_MODEL=gemini-2.0-flash
 ```
 
 **Valid Gemini Model Names (as of Oct 2024):**
-- `gemini-2.0-flash-001` ← Recommended (newest, fast)
+- `gemini-2.5-flash` ← Recommended (newest)
+- `gemini-2.0-flash-001` ← Recommended (fast)
 - `gemini-1.5-flash` ← Stable alternative
 - `gemini-1.5-pro` ← More powerful, slower
 - `gemini-1.0-pro` ← Older, still works
+
+Check Google's website for the latest information on Gemini model: https://ai.google.dev/gemini-api/docs/models
 
 **How to verify:**
 ```bash
@@ -131,7 +134,7 @@ Ensure manifest has:
 
 ---
 
-### Issue 5: PDF Upload Not Working
+### Issue 5: PDF Upload Not Working (or PDF Processing failed)
 
 **Symptoms:**
 - PDF uploads fail
@@ -182,7 +185,7 @@ OLLAMA_BASE_URL=http://localhost:11434
 #### C. Model Not Pulled
 ```bash
 # Pull the model
-ollama pull llama2
+ollama pull llama3
 
 # Verify
 ollama list

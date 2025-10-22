@@ -31,7 +31,7 @@ class Config:
     
     # For Ollama (local alternative)
     OLLAMA_BASE_URL = "http://localhost:11434"
-    OLLAMA_MODEL = "llama2"
+    OLLAMA_MODEL = "llama3"
     
     # Model priority
     PRIMARY_MODEL = 'gemini'  # or 'ollama'
